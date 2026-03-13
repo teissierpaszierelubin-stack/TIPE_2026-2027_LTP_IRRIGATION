@@ -1,0 +1,282 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Notes TIPE 2026-2027</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+            background-color: #f7f9fc;
+            color: #222;
+        }
+        h1, h2, h3 {
+            color: #1a3c6e;
+        }
+        h1 {
+            border-bottom: 3px solid #1a3c6e;
+            padding-bottom: 5px;
+        }
+        section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        ul {
+            margin-left: 20px;
+        }
+        li {
+            margin-bottom: 6px;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .idea {
+            margin-left: 15px;
+            color: #444;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>TIPE 2026-2027 - Teissier Pasziere Lubin - MPII</h1>
+
+<section>
+    <h2>Le choix du thème :</h2>
+    <ul>
+        <li>
+            <strong>Mon thème de TIPE se porterait sur l'agriculture pour plusieures raisons, en premier lieu par mes liens familiaux, toute ma famille étant dedans j'y ai toujours travaillé donc ce sujet me tient à coeur, de plus l'agriculture et la source de tout, elle nous nourris et aide a l'écologie (pour le bio), pour finir, il est possible de faire des expériences en "situation réelles" et même de pouvoir être en contact avec des personnes dont c'est le métier.</strong>
+        </li>
+    </ul>
+</section>
+
+<section>
+    <h2>TIPE – Mars 2026</h2>
+    <h3>recherche autour des graphes</h3>
+    <ul>
+        <li>
+            <strong>Comment concevoir un réseau d’irrigation agricole minimisant la quantité de tuyaux tout en assurant le transport de l’eau nécessaire ?</strong>
+            <p>
+              Le terrain est modélisé par un graphe où les parcelles sont des nœuds et les canalisations des arêtes pondérées par leur longueur.
+              Des algorithmes d’optimisation comme Kruskal ou Prim permettent de construire un réseau reliant toutes les parcelles avec une longueur minimale.
+              En ajoutant les contraintes physiques d’écoulement de l’eau (débit et diamètre des tuyaux), on obtient un modèle plus réaliste du coût du réseau.
+              Une simulation informatique et une expérience sur un réseau hydraulique miniature permettent ensuite de comparer différentes structures et d’évaluer leur efficacité.
+              Plus de détails sont disponibles dans le <a href="https://docs.google.com/document/d/1ze8p9ehVDkisGdbefB8eMkqq4wwIbfM61KqcDAUGKbI/edit?usp=sharing" target="_blank">document complet du projet</a>.
+            </p>
+        </li>
+     </ul>
+
+    <h3>Bibliographie</h3>
+    <ul>
+        <li>
+            <a href="https://www.sciencedirect.com/science/article/pii/S2772375525001182?" target="_blank">
+              Optimisation de l’irrigation et de la fertigation dans l’agriculture intelligente: un cadre de micro-services basé sur l’IoT
+            </a>
+        </li>
+
+        <li>
+            <a href="https://ijsret.com/wp-content/uploads/2023/11/IJSRET_V9_issue6_461.pdf?" target="_blank">
+                A Review on Optimization Designs in Irrigation Systems
+            </a>
+        </li>
+
+        <li>
+            <a href="https://mej.researchcommons.org/home/vol39/iss1/4/?" target="_blank">
+                Optimization of Developed Irrigation System Network Using Genetic Algorithms
+            </a>
+        </li>
+
+        <li>
+            <a href="https://digital.library.adelaide.edu.au/items/a3e664bb-1904-4167-a3d4-c8b9293b185c?" target="_blank">
+                Optimal water allocation and scheduling for irrigation using ant colony algorithms
+            </a>
+        </li>
+    </ul>
+
+</section>
+
+<section>
+    <h2>TIPE – Février 2026(anciennes idées)</h2>
+
+    <h3>Recherche de sujet autour de l’agriculture et de l’irrigation par ordre de préférence</h3>
+
+    <ul>
+        <li>
+            <strong>Quels paramètres influencent le temps de refroidissement d’une serre agricole passive et comment les optimiser afin de limiter les pertes énergétiques ?</strong>
+            <div class="idea">
+                Ce TIPE étudie le comportement thermique d’une serre agricole passive afin de comprendre comment limiter ses pertes de chaleur sans apport énergétique supplémentaire.
+On modélise la serre comme un système thermique global régi par une équation différentielle du premier ordre, dont la solution permet de définir une constante de temps thermique caractérisant la qualité d’isolation.
+
+Une expérience est menée d’abord sur une mini-serre instrumentée, puis validée sur une serre agricole réelle, en mesurant l’évolution de la température intérieure lors du refroidissement nocturne.
+
+L’objectif est d’identifier les paramètres influençant les pertes (parois, inertie thermique, ventilation) et d’évaluer quantitativement leur impact afin d’optimiser les performances énergétiques passives
+            </div>
+        </li>
+
+        <li>
+            <strong>Comment limiter les pertes thermiques d’une serre sans apport énergétique supplémentaire ?</strong>
+            <div class="idea">
+                Idée d’expérience : tests sur le long terme en conditions réelles, en hiver et en été, avec capteurs et comparaisons. On pourrait installer des capteurs et un système informatique indiquerait ce qu'il faut faire ou même juste en ressortir une modélisation ou une courbe de la température avec plusieures indications qui montrerait quand fermer ou ouvrir.
+            </div>
+        </li>
+
+        <li>
+            <strong>Comment piloter automatiquement un système d’irrigation en minimisant l’eau consommée, à partir d’un modèle physique couplé à un algorithme de contrôle ?</strong>
+            <div class="idea">
+                Idée d’expérience : créer un système avec microcontrôleur et capteurs pour optimiser l’irrigation, à échelle réelle ou réduite. Possibilité d’utiliser des images de drones pour une analyse automatique.
+            </div>
+        </li>
+
+        <li>
+            <strong>Comment modéliser l’évolution de l’humidité d’un sol et optimiser une stratégie d’irrigation automatique afin de minimiser la consommation d’eau ?</strong>
+            <div class="idea">
+                Idée d'expérience : Avec des capteurs d'humidité relier a un autre capteur chargé d'activer ou d'éteindre une pompe relié entre eux ou un programme se charge en fonction des données des capteurs de d'activer l'arrosage ou non mais il faut aussi prendre en compte la température extérieure pour l'évaporation ainsi que l'heure pour optimiser l'arrosage.
+                Cela permet de lier l'informatique avec des tableaux et des entrées et sorties pour les capteurs mais aussi la physique avec la thermo pour la température de l'eau en fonction de la température extérieur et enfin un peu de math pour trouver la solution de l'équation obtenue en fonction de toutes les contraintes.
+            </div>
+        </li>
+
+        <li>
+            <strong>Dans quelle mesure un modèle simple de séchage du sol permet-il de réduire la consommation d’eau d’un système d’irrigation automatique ?</strong>
+            <div class="idea">
+                reformulation de la première que je préfère.
+            </div>
+        </li>
+
+
+        <li>
+            <strong>Comment réduire la quantité d’eau apportée tout en assurant une humidité suffisante du sol ?</strong>
+            <div class="idea">
+                Piste mêlant physique avec appui en mathématiques et informatique.
+            </div>
+        </li>
+
+        <li>
+            <strong>Existe-t-il une loi d’arrosage optimale minimisant l’eau consommée sous contrainte d’humidité ?</strong>
+            <div class="idea">
+                Approche plus mathématique avec modélisation.
+            </div>
+        </li>
+    </ul>
+
+</section>
+
+<section>
+    <h2>Bibliographie</h2>
+    <ul>
+        <li>
+            <a href="https://theses.fr/1991PERP0126" target="_blank">
+                Modélisation énergétique des serres : contribution à la mise au point d'un logiciel de thermique appliqué à l'ingéniérie des serres
+            </a>
+        </li>
+
+        <li>
+            <a href="https://fr.scribd.com/document/556346254/Systeme-d-irrigation-intelligent-Commande-par-microcontroleur" target="_blank">
+                Système d'irrigation intelligent commandé par microcontrôleur
+            </a>
+        </li>
+
+        <li>
+            <a href="https://theses.fr/2025IPPAS005" target="_blank">
+                Application de modèles avancés d'intelligence artificielle à l'irrigation intelligente
+            </a>
+        </li>
+
+        <li>
+            <a href="https://theses.hal.science/tel-05070439" target="_blank">
+                Irrigation intelligente à partir de données capteurs et d'images satellitaires
+            </a>
+        </li>
+
+
+
+        <li>
+            <a href="https://theses.fr/2023STRAD018" target="_blank">
+                Calcul et optimisation de trajectoires pour véhicules autonomes en environnement agricole
+            </a>
+        </li>
+
+        <li>
+            <a href="https://publication-theses.unistra.fr/public/theses_doctorat/2023/POUR_ARAB_Danial_2023_ED269.pdf" target="_blank">
+                Thèse complète (PDF)
+            </a>
+        </li>
+
+
+        <li>
+            <a href="https://www.sciencedirect.com/science/article/pii/S2772375523000813" target="_blank">
+                Modélisation de la dynamique de l'humidité du sol pour la planification de l'irrigation intelligente
+            </a>
+        </li>
+
+        <li>
+            <a href="https://www.mdpi.com/2073-4395/11/9/1810" target="_blank">
+                Smart Farming Irrigation
+            </a>
+        </li>
+
+        <li>
+            <a href="https://www.sciencedirect.com/science/article/abs/pii/S0967066124001722" target="_blank">
+                Contrôle prédictif basé modèle pour l'irrigation
+            </a>
+        </li>
+
+        <li>
+            <a href="https://fr.wikipedia.org/wiki/Arrosage_intelligent" target="_blank">
+                Arrosage intelligent (Wikipédia)
+            </a>
+        </li>
+
+        <li>
+            <a href="https://fr.wikipedia.org/wiki/Capteur_d%27humidit%C3%A9_du_sol" target="_blank">
+                Capteur d'humidité du sol (Wikipédia)
+            </a>
+        </li>
+    </ul>
+</section>
+
+<section>
+    <h2>Aides et débuts</h2>
+    <h3>Sources YouTube</h3>
+    <ul>
+        <li>Veritasium</li>
+        <li>Practical Engineering</li>
+        <li>Science Étonnante</li>
+        <li>3Blue1Brown</li>
+    </ul>
+    <h3>Méthode de recherche</h3>
+    <ul>
+        <li>Trouver une thèse peut être une bonne solution</li>
+        <li>Chercher des sujets sur Google Scholar</li>
+        <li>Consulter la bibliothèque universitaire</li>
+        <li>Faire un journal de bord et noter tous les liens (possibilité de faire un site en HTML)</li>
+    </ul>
+    <h3>Axes possibles : Sobriété / Efficacité / Optimisation</h3>
+    <ul>
+        <li>Écologie / Cogénération / Énergétique</li>
+        <li>Simplicité</li>
+        <li>Rendement / Conversion d'énergie / Moteur éolien-solaire</li>
+        <li>Processeur → TDP / dissipation thermique</li>
+        <li>Trajet / réseau</li>
+        <li>Parallélisation</li>
+        <li>Stockage et compression → image, audio (Shannon)</li>
+        <li>Optimisation ou efficacité d’un programme (complexité temporelle et spatiale)</li>
+        <li>Sucre syntaxique</li>
+    </ul>
+    <h3>Outils utiles</h3>
+    <ul>
+        <li>Application téléphone : Phyphox</li>
+    </ul>
+</section>
+
+</body>
+</html>
