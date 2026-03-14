@@ -3,6 +3,420 @@
 <head>
 
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Notes TIPE 2026-2027</title>
+
+<style>
+
+body {
+font-family: Arial, Helvetica, sans-serif;
+line-height: 1.6;
+margin: 40px;
+background-color: #f7f9fc;
+color: #222;
+font-size: 18px;
+}
+
+h1, h2, h3 {
+color: #1a3c6e;
+}
+
+h1 {
+border-bottom: 3px solid #1a3c6e;
+padding-bottom: 5px;
+}
+
+section {
+background: white;
+padding: 20px;
+margin-bottom: 25px;
+border-radius: 10px;
+box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+ul {
+margin-left: 20px;
+}
+
+li {
+margin-bottom: 6px;
+}
+
+a {
+color: #0066cc;
+text-decoration: none;
+}
+
+a:hover {
+text-decoration: underline;
+}
+
+.idea {
+margin-left: 15px;
+color: #444;
+font-style: italic;
+}
+
+nav{
+margin-bottom:25px;
+}
+
+nav a{
+margin-right:15px;
+font-weight:bold;
+}
+
+.zoom{
+margin-bottom:20px;
+}
+
+.zoom button{
+font-size:16px;
+padding:5px 10px;
+margin-right:5px;
+cursor:pointer;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>TIPE 2026-2027 - Teissier Pasziere Lubin - MPII</h1>
+
+<div class="zoom">
+    <button onclick="changeFontSize(2)">A+</button>
+    <button onclick="changeFontSize(-2)">A-</button>
+</div>
+
+<nav>
+
+<a href="#theme">Thème</a>
+<a href="#mars">Recherche Mars</a>
+<a href="#fevrier">Recherche Février</a>
+<a href="#aides">Aides</a>
+
+</nav>
+
+<section id="theme">
+
+<h2>Le choix du thème :</h2>
+
+<ul>
+
+<li>
+
+<strong>
+
+Mon thème de TIPE se porterait sur l'agriculture pour plusieurs raisons,
+en premier lieu par mes liens familiaux, toute ma famille étant dedans
+j'y ai toujours travaillé donc ce sujet me tient à cœur.
+
+De plus l'agriculture est la source de tout, elle nous nourrit
+et aide à l'écologie (pour le bio).
+
+Pour finir, il est possible de faire des expériences en situation
+réelle et même de pouvoir être en contact avec des personnes dont
+c'est le métier.
+
+</strong>
+
+</li>
+
+</ul>
+
+</section>
+
+<section id="mars">
+
+<h2>TIPE – Mars 2026</h2>
+
+<h3>Recherche autour des graphes</h3>
+
+<ul>
+
+<li>
+
+<strong>
+
+Comment concevoir un réseau d’irrigation agricole minimisant la quantité
+de tuyaux tout en assurant le transport de l’eau nécessaire ?
+
+</strong>
+
+<p>
+
+Le terrain est modélisé par un graphe où les parcelles sont des nœuds
+et les canalisations des arêtes pondérées par leur longueur.
+
+Des algorithmes d’optimisation comme Kruskal ou Prim permettent de
+construire un réseau reliant toutes les parcelles avec une longueur
+minimale.
+
+En ajoutant les contraintes physiques d’écoulement de l’eau
+(débit et diamètre des tuyaux), on obtient un modèle plus réaliste
+du coût du réseau.
+
+Une simulation informatique et une expérience sur un réseau hydraulique
+miniature permettent ensuite de comparer différentes structures
+et d’évaluer leur efficacité.
+
+Plus de détails sont disponibles dans le
+
+<a href="https://docs.google.com/document/d/1ze8p9ehVDkisGdbefB8eMkqq4wwIbfM61KqcDAUGKbI/edit?usp=sharing" target="_blank">
+document complet du projet
+</a>.
+
+</p>
+
+</li>
+
+</ul>
+
+<h3>Bibliographie</h3>
+
+<ul>
+
+<li>
+<a href="https://www.sciencedirect.com/science/article/pii/S2772375525001182?" target="_blank">
+Optimisation de l’irrigation et de la fertigation dans l’agriculture intelligente: un cadre de micro-services basé sur l’IoT
+</a>
+</li>
+
+<li>
+<a href="https://ijsret.com/wp-content/uploads/2023/11/IJSRET_V9_issue6_461.pdf?" target="_blank">
+A Review on Optimization Designs in Irrigation Systems
+</a>
+</li>
+
+<li>
+<a href="https://mej.researchcommons.org/home/vol39/iss1/4/?" target="_blank">
+Optimization of Developed Irrigation System Network Using Genetic Algorithms
+</a>
+</li>
+
+<li>
+<a href="https://digital.library.adelaide.edu.au/items/a3e664bb-1904-4167-a3d4-c8b9293b185c?" target="_blank">
+Optimal water allocation and scheduling for irrigation using ant colony algorithms
+</a>
+</li>
+
+</ul>
+
+</section>
+
+<section id="fevrier">
+
+<h2>TIPE – Février 2026 (anciennes idées)</h2>
+
+<h3>Recherche de sujet autour de l’agriculture et de l’irrigation par ordre de préférence</h3>
+
+<ul>
+
+<li>
+
+<strong>
+
+Quels paramètres influencent le temps de refroidissement d’une serre agricole passive et comment les optimiser afin de limiter les pertes énergétiques ?
+
+</strong>
+
+<div class="idea">
+
+Ce TIPE étudie le comportement thermique d’une serre agricole passive
+afin de comprendre comment limiter ses pertes de chaleur sans apport
+énergétique supplémentaire.
+
+On modélise la serre comme un système thermique global régi par une
+équation différentielle du premier ordre dont la solution permet
+de définir une constante de temps thermique caractérisant
+la qualité d’isolation.
+
+Une expérience est menée d’abord sur une mini-serre instrumentée,
+puis validée sur une serre agricole réelle, en mesurant l’évolution
+de la température intérieure lors du refroidissement nocturne.
+
+</div>
+
+</li>
+
+<li>
+
+<strong>
+Comment limiter les pertes thermiques d’une serre sans apport énergétique supplémentaire ?
+</strong>
+
+<div class="idea">
+Tests sur le long terme avec capteurs et modélisation thermique.
+</div>
+
+</li>
+
+<li>
+
+<strong>
+Comment piloter automatiquement un système d’irrigation en minimisant l’eau consommée ?
+</strong>
+
+<div class="idea">
+Créer un système avec microcontrôleur et capteurs pour optimiser l’irrigation.
+</div>
+
+</li>
+
+<li>
+
+<strong>
+Comment modéliser l’évolution de l’humidité d’un sol et optimiser une stratégie d’irrigation automatique ?
+</strong>
+
+<div class="idea">
+Capteurs d'humidité reliés à une pompe pilotée automatiquement.
+</div>
+
+</li>
+
+<li>
+
+<strong>
+Dans quelle mesure un modèle simple de séchage du sol permet-il de réduire la consommation d’eau ?
+</strong>
+
+<div class="idea">
+Reformulation de la première idée.
+</div>
+
+</li>
+
+<li>
+
+<strong>
+Comment réduire la quantité d’eau apportée tout en assurant une humidité suffisante du sol ?
+</strong>
+
+<div class="idea">
+Approche mêlant physique, mathématiques et informatique.
+</div>
+
+</li>
+
+<li>
+
+<strong>
+Existe-t-il une loi d’arrosage optimale minimisant l’eau consommée sous contrainte d’humidité ?
+</strong>
+
+<div class="idea">
+Approche plus mathématique avec modélisation.
+</div>
+
+</li>
+
+</ul>
+
+<h2>Bibliographie</h2>
+
+<ul>
+
+<li><a href="https://theses.fr/1991PERP0126">Modélisation énergétique des serres</a></li>
+
+<li><a href="https://fr.scribd.com/document/556346254/Systeme-d-irrigation-intelligent-Commande-par-microcontroleur">
+Système d'irrigation intelligent commandé par microcontrôleur
+</a></li>
+
+<li><a href="https://theses.fr/2025IPPAS005">
+Application de modèles avancés d'intelligence artificielle à l'irrigation intelligente
+</a></li>
+
+<li><a href="https://theses.hal.science/tel-05070439">
+Irrigation intelligente à partir de données capteurs et images satellitaires
+</a></li>
+
+<li><a href="https://theses.fr/2023STRAD018">
+Calcul et optimisation de trajectoires pour véhicules autonomes en environnement agricole
+</a></li>
+
+<li><a href="https://publication-theses.unistra.fr/public/theses_doctorat/2023/POUR_ARAB_Danial_2023_ED269.pdf">
+Thèse complète
+</a></li>
+
+<li><a href="https://www.sciencedirect.com/science/article/pii/S2772375523000813">
+Modélisation de la dynamique de l'humidité du sol
+</a></li>
+
+<li><a href="https://www.mdpi.com/2073-4395/11/9/1810">
+Smart Farming Irrigation
+</a></li>
+
+<li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0967066124001722">
+Contrôle prédictif basé modèle pour l'irrigation
+</a></li>
+
+<li><a href="https://fr.wikipedia.org/wiki/Arrosage_intelligent">
+Arrosage intelligent
+</a></li>
+
+<li><a href="https://fr.wikipedia.org/wiki/Capteur_d%27humidit%C3%A9_du_sol">
+Capteur d'humidité du sol
+</a></li>
+
+</ul>
+
+</section>
+
+<section id="aides">
+
+<h2>Aides et débuts</h2>
+
+<h3>Sources YouTube</h3>
+
+<ul>
+
+<li>Veritasium</li>
+<li>Practical Engineering</li>
+<li>Science Étonnante</li>
+<li>3Blue1Brown</li>
+
+</ul>
+
+<h3>Méthode de recherche</h3>
+
+<ul>
+
+<li>Trouver une thèse</li>
+<li>Chercher sur Google Scholar</li>
+<li>Consulter la bibliothèque universitaire</li>
+<li>Tenir un journal de bord</li>
+
+</ul>
+
+<h3>Outils utiles</h3>
+
+<ul>
+<li>Application téléphone : Phyphox</li>
+</ul>
+
+</section>
+
+<script>
+
+function changeFontSize(change){
+let body = document.body
+let style = window.getComputedStyle(body, null).getPropertyValue('font-size')
+let current = parseFloat(style)
+
+body.style.fontSize = (current + change) + "px"
+}
+
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="fr">
+<head>
+
+<meta charset="UTF-8">
 <title>Notes TIPE 2026-2027</title>
 
 <style>
