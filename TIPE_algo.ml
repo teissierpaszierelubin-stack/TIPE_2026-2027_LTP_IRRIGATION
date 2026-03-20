@@ -1,0 +1,264 @@
+(* ===================== *)
+(*        TYPES          *)
+(* ===================== *)
+
+type point = {x:int; y:int}
+type arete = int * int * float
+
+type arbre =
+  | Feuille of int
+  | Noeud of int * (arbre * float) list   (* enfant + longueur *)
+
+type arroseur = {
+  x: int;
+  y: int;
+  rayon: int;
+}
+
+(* ===================== *)
+(*   GRILLE TERRAIN      *)
+(* ===================== *)
+
+let largeur = 20
+let hauteur = 20
+
+(* 0 = normal, 1 = difficile, -1 = interdit *)
+let terrain = Array.init hauteur (fun _ ->
+  Array.init largeur (fun _ ->
+    let r = Random.float 1.0 in
+    if r < 0.1 then -1
+    else if r < 0.3 then 1
+    else 0
+  )
+)
+
+let cout_case x y =
+  match terrain.(y).(x) with
+  | -1 -> infinity
+  | 0 -> 1.0
+  | 1 -> 5.0
+  | _ -> 1.0
+
+(* ===================== *)
+(*   POINTS (PARCELLES)  *)
+(* ===================== *)
+
+let rec random_point () =
+  let x = Random.int largeur in
+  let y = Random.int hauteur in
+  if terrain.(y).(x) = -1 then random_point ()
+  else {x; y}
+
+let generate_points n =
+  Array.init n (fun _ -> random_point ())
+
+(* ===================== *)
+(*    DIJKSTRA           *)
+(* ===================== *)
+
+let voisins (x,y) =
+  [(x+1,y); (x-1,y); (x,y+1); (x,y-1)]
+  |> List.filter (fun (i,j) ->
+    i >= 0 && i < largeur && j >= 0 && j < hauteur
+  )
+
+let dijkstra src dst =
+  let dist = Array.make_matrix hauteur largeur infinity in
+  let visited = Array.make_matrix hauteur largeur false in
+  let pq = ref [ (0., (src.x, src.y)) ] in
+  dist.(src.y).(src.x) <- 0.;
+
+  let rec loop () =
+    match !pq with
+    | [] -> infinity
+    | _ ->
+        let (d,(x,y)) =
+          List.fold_left (fun acc e -> if fst e < fst acc then e else acc) (List.hd !pq) !pq
+        in
+        pq := List.filter (fun e -> e <> (d,(x,y))) !pq;
+
+        if (x,y) = (dst.x, dst.y) then d
+        else if visited.(y).(x) then loop ()
+        else begin
+          visited.(y).(x) <- true;
+          List.iter (fun (nx,ny) ->
+            let c = cout_case nx ny in
+            if not (Float.is_infinite c) then
+              let nd = d +. c in
+              if nd < dist.(ny).(nx) then begin
+                dist.(ny).(nx) <- nd;
+                pq := (nd,(nx,ny)) :: !pq
+              end
+          ) (voisins (x,y));
+          loop ()
+        end
+  in
+  loop ()
+
+(* ===================== *)
+(*   GRAPHE (RÉALISTE)   *)
+(* ===================== *)
+
+let graphe points =
+  let n = Array.length points in
+  let edges = ref [] in
+  for i = 0 to n-1 do
+    for j = i+1 to n-1 do
+      let d = dijkstra points.(i) points.(j) in
+      if not (Float.is_infinite d) then
+        edges := (i,j,d) :: !edges
+    done
+  done;
+  !edges
+
+(* ===================== *)
+(*     UNION-FIND        *)
+(* ===================== *)
+
+let rec find parent x =
+  if parent.(x) <> x then
+    parent.(x) <- find parent parent.(x);
+  parent.(x)
+
+let union parent rank x y =
+  let rx = find parent x in
+  let ry = find parent y in
+  if rx <> ry then
+    if rank.(rx) < rank.(ry) then parent.(rx) <- ry
+    else if rank.(rx) > rank.(ry) then parent.(ry) <- rx
+    else begin
+      parent.(ry) <- rx;
+      rank.(rx) <- rank.(rx) + 1
+    end
+
+(* ===================== *)
+(*       KRUSKAL         *)
+(* ===================== *)
+
+let kruskal n aretes =
+  let parent = Array.init n (fun i -> i) in
+  let rank = Array.make n 0 in
+  let aretes_triees =
+    List.sort (fun (_,_,w1) (_,_,w2) -> compare w1 w2) aretes
+  in
+  let rec aux edges arbre =
+    match edges with
+    | [] -> arbre
+    | (u,v,w)::q ->
+        if find parent u <> find parent v then begin
+          union parent rank u v;
+          aux q ((u,v,w)::arbre)
+        end else
+          aux q arbre
+  in
+  aux aretes_triees []
+
+(* ===================== *)
+(*   ARBRE ENRACINÉ      *)
+(* ===================== *)
+
+let build_tree n edges root =
+  let adj = Array.make n [] in
+  List.iter (fun (u,v,w) ->
+    adj.(u) <- (v,w) :: adj.(u);
+    adj.(v) <- (u,w) :: adj.(v)
+  ) edges;
+  let rec dfs visited u =
+    visited.(u) <- true;
+    let enfants = List.filter (fun (v,_) -> not visited.(v)) adj.(u) in
+    match enfants with
+    | [] -> Feuille u
+    | _ -> Noeud (u, List.map (fun (v,l) -> (dfs visited v, l)) enfants)
+  in
+  dfs (Array.make n false) root
+
+(* ===================== *)
+(*   DÉBIT / LOI MURRAY  *)
+(* ===================== *)
+
+let rec debit arbre =
+  match arbre with
+  | Feuille _ -> 1.0
+  | Noeud (_, enfants) ->
+      List.fold_left (fun acc (a,_) -> acc +. debit a) 0. enfants
+
+let rec rayon arbre =
+  match arbre with
+  | Feuille _ -> 1.0
+  | Noeud (_, enfants) ->
+      let somme = List.fold_left (fun acc (a,_) -> acc +. (rayon a) ** 3.) 0. enfants in
+      somme ** (1./.3.)
+
+let rec energie arbre =
+  match arbre with
+  | Feuille _ -> 0.
+  | Noeud (_, enfants) ->
+      List.fold_left (fun acc (a,l) ->
+        let q = debit a in
+        let r = rayon a in
+        let e = (q *. q *. l) /. (r ** 4.) +. (r *. r *. l) in
+        acc +. e +. energie a
+      ) 0. enfants
+
+(* ===================== *)
+(*   PLACEMENT ARROSEURS  *)
+(* ===================== *)
+
+let placer_arroseurs arbre rayon_arroseur =
+  let rec aux a acc =
+    match a with
+    | Feuille idx -> ({x=points.(idx).x; y=points.(idx).y; rayon=rayon_arroseur} :: acc)
+    | Noeud (idx, enfants) ->
+        let a_arroseur = {x=points.(idx).x; y=points.(idx).y; rayon=rayon_arroseur} in
+        List.fold_left (fun ac (child,_) -> aux child ac) (a_arroseur :: acc) enfants
+  in
+  aux arbre []
+
+let coverage arroseurs =
+  let covered = Array.make_matrix hauteur largeur false in
+  for y = 0 to hauteur-1 do
+    for x = 0 to largeur-1 do
+      covered.(y).(x) <- List.exists (fun a ->
+        let dx = x - a.x in
+        let dy = y - a.y in
+        dx*dx + dy*dy <= a.rayon * a.rayon
+      ) arroseurs
+    done
+  done;
+  covered
+
+let pourcentage_coverage covered =
+  let total = largeur * hauteur in
+  let nb = ref 0 in
+  for y = 0 to hauteur-1 do
+    for x = 0 to largeur-1 do
+      if covered.(y).(x) then incr nb
+    done
+  done;
+  (float !nb) /. (float total) *. 100.
+
+(* ===================== *)
+(*        MAIN           *)
+(* ===================== *)
+
+let () =
+  Random.self_init ();
+  let n = 8 in
+  let points = generate_points n in
+  let edges = graphe points in
+  let mst = kruskal n edges in
+  let arbre = build_tree n mst 0 in
+
+  let r = rayon arbre in
+  let e = energie arbre in
+
+  Printf.printf "Rayon racine : %f\n" r;
+  Printf.printf "Energie totale : %f\n" e;
+
+  (* placer arroseurs autour de chaque noeud *)
+  let rayon_arroseur = 5 in
+  let arroseurs = placer_arroseurs arbre rayon_arroseur in
+  let covered = coverage arroseurs in
+  let pct = pourcentage_coverage covered in
+  Printf.printf "Couverture terrain : %.2f%% avec %d arroseurs\n"
+    pct (List.length arroseurs)
