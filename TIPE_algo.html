@@ -115,72 +115,721 @@ nav a {
 <h2>Partie en Ocaml</h2>
 
 <pre><code class="language-ocaml">
-(*=================*)
-(*      TYPE       *)
-(*=================*)
+(* ============================================================ *)
+(*         TIPE 2026-2027 — Teissier Pasziere Lubin             *)
+(*    Réseau d'irrigation agricole optimal                      *)
+(* ============================================================ *)
 
-type point = {x:int; y:int; c:int}
-type arete = int * int * float
 
-type arbre =
-  | Feuille of int
-  | Noeud of int * (arbre * float) list
+(* ============================================================ *)
+(*                  CONSTANTES PHYSIQUES                        *)
+(* ============================================================ *)
 
-type arroseur = {
-  x: int;
-  y: int;
-  rayon: int;
+let pi       = 4.0 *. atan 1.0
+let mu       = 1.002e-3
+let rho      = 1000.0
+let g_grav   = 9.81
+let epsilon  = 7.0e-6
+let p_source = 8.0e5      (* 8 bar — pompe agricole puissante    *)
+let p_min    = 1.5e5      (* 1.5 bar minimum à l'arroseur        *)
+let v_max    = 1.5
+
+
+(* ============================================================ *)
+(*                   PARAMÈTRES DU RÉSEAU                       *)
+(* ============================================================ *)
+
+let largeur        = 30
+let hauteur        = 30
+let case_size      = 5.0   (* 1 case = 5 m                       *)
+
+(* Arroseur agricole grande portée (Rain Bird 8005) :
+   débit 15 L/min, rayon 6 cases = 30 m                         *)
+let debit_unit     = 15.0
+let q_unit_m3s     = debit_unit /. 60000.0
+let d0             = sqrt (4.0 *. q_unit_m3s /. (pi *. v_max))
+
+(* Rayon de couverture : 5 cases = 30 m
+   Distance minimale entre deux arroseurs = 2 × rayon - 1
+   (chevauchement de ~15% pour éviter les zones mortes)          *)
+let rayon_arroseur = 5
+let dist_min_arroseurs = 2 * rayon_arroseur - 1
+
+
+(* ============================================================ *)
+(*                          TYPES                               *)
+(* ============================================================ *)
+
+type point = { x : int; y : int }
+
+type arete = { i : int; j : int; poids : float }
+
+type info_arete = {
+  chemin     : (int * int) list;
+  longueur_m : float;
+  obstacle   : bool;
 }
 
-let largeur = 20
-let hauteur = 20
 
-(*=================*)
-(*     MATRICE     *)
-(*=================*)
+(* ============================================================ *)
+(*           GÉNÉRATION DU TERRAIN ALÉATOIRE                    *)
+(* ============================================================ *)
 
-let write_matrix filename mat =
-  let oc = open_out filename in
-  Array.iter (fun row ->
-    Array.iter (fun x ->
-      Printf.fprintf oc "%3d " x
-    ) row;
-    output_string oc "\n"
-  ) mat;
-  close_out oc
+let () = Random.self_init ()
 
 let terrain =
-  Array.init hauteur (fun _ ->
-    Array.init largeur (fun _ ->
-      let r = Random.float 1.0 in
-      if r < 0.1 then -1
-      else if r < 0.3 then 1
-      else if r < 0.5 then 2
-      else if r < 0.7 then 3
-      else 0
+  let t = Array.make_matrix hauteur largeur 0 in
+
+  (*let bw = 3 + Random.int 3 and bh = 2 + Random.int 3 in
+  let bx = 2 + Random.int (max 1 (largeur - bw - 3)) in
+  let by = 1 + Random.int (max 1 (hauteur - bh - 2)) in
+  for dy = 0 to bh-1 do for dx = 0 to bw-1 do
+    if by+dy < hauteur && bx+dx < largeur then
+      t.(by+dy).(bx+dx) <- -1
+  done done;
+
+  let fw = 4 + Random.int 5 and fh = 1 + Random.int 2 in
+  let fx = 3 + Random.int (max 1 (largeur - fw - 4)) in
+  let fy = 3 + Random.int (max 1 (hauteur - fh - 4)) in
+  let ok = ref true in
+  for dy = 0 to fh-1 do for dx = 0 to fw-1 do
+    if fy+dy < hauteur && fx+dx < largeur
+    && t.(fy+dy).(fx+dx) = -1 then ok := false
+  done done;
+  if !ok then
+    for dy = 0 to fh-1 do for dx = 0 to fw-1 do
+      if fy+dy < hauteur && fx+dx < largeur then
+        t.(fy+dy).(fx+dx) <- -1
+    done done;*)
+
+  for _ = 1 to 3 + Random.int 3 do
+    let pw = 2 + Random.int 3 and ph = 2 + Random.int 3 in
+    let px = 1 + Random.int (max 1 (largeur - pw - 1)) in
+    let py = 1 + Random.int (max 1 (hauteur - ph - 1)) in
+    for dy = 0 to ph-1 do for dx = 0 to pw-1 do
+      if py+dy < hauteur && px+dx < largeur
+      && t.(py+dy).(px+dx) = 0 then
+        t.(py+dy).(px+dx) <- 1
+    done done
+  done;
+
+  for _ = 1 to 2 + Random.int 3 do
+    let zw = 3 + Random.int 4 and zh = 3 + Random.int 4 in
+    let zx = 1 + Random.int (max 1 (largeur - zw - 1)) in
+    let zy = 1 + Random.int (max 1 (hauteur - zh - 1)) in
+    for dy = 0 to zh-1 do for dx = 0 to zw-1 do
+      if zy+dy < hauteur && zx+dx < largeur
+      && t.(zy+dy).(zx+dx) = 0 then
+        t.(zy+dy).(zx+dx) <- 2
+    done done
+  done;
+
+  for y = 0 to hauteur-1 do
+    if t.(y).(0) = -1 then t.(y).(0) <- 0
+  done;
+  t
+
+let arrosable x y =
+  x >= 0 && x < largeur && y >= 0 && y < hauteur
+  && terrain.(y).(x) <> -1
+
+
+(* ============================================================ *)
+(*                      ALTITUDE                                *)
+(* ============================================================ *)
+
+let lisser alt =
+  Array.init hauteur (fun y ->
+    Array.init largeur (fun x ->
+      let s = ref 0.0 and n = ref 0 in
+      for dy = -2 to 2 do for dx = -2 to 2 do
+        let nx = x+dx and ny = y+dy in
+        if nx>=0 && nx<largeur && ny>=0 && ny<hauteur
+        then begin s := !s +. alt.(ny).(nx); incr n end
+      done done;
+      !s /. float_of_int !n
     )
   )
 
-(*=================*)
-(*      COÛTS      *)
-(*=================*)
+let altitude =
+  let px = (Random.float 4.0) -. 2.0 in
+  let py = (Random.float 2.0) -. 1.0 in
+  let brut = Array.init hauteur (fun y ->
+    Array.init largeur (fun x ->
+      3.0 +. px *. (float_of_int x /. float_of_int (largeur-1))
+          +. py *. (float_of_int y /. float_of_int (hauteur-1))
+          +. (Random.float 0.4) -. 0.2
+    )
+  ) in
+  lisser (lisser brut)
 
-let cout_case x y =
-  match terrain.(y).(x) with
-  | -1 -> infinity
-  | 0 -> 1.0
-  | 1 -> 5.0
-  | _ -> 1.0
+let alt p = altitude.(p.y).(p.x)
 
-let rec random_point () =
-  let x = Random.int largeur in
-  let y = Random.int hauteur in
-  if terrain.(y).(x) = -1 then random_point ()
-  else let c = cout_case x y in
-  {x ; y; c}
 
-let generate_points n =
-  Array.init n (fun _ -> random_point ())
+(* ============================================================ *)
+(*    SOURCE D'EAU : MILIEU DU BORD GAUCHE                      *)
+(* ============================================================ *)
+
+let source =
+  let ty = hauteur / 2 in
+  let best = ref ty and found = ref false and delta = ref 0 in
+  while not !found do
+    let y1 = ty + !delta and y2 = ty - !delta in
+    if y1 < hauteur && terrain.(y1).(0) <> -1
+    then begin best := y1; found := true end
+    else if y2 >= 0 && terrain.(y2).(0) <> -1
+    then begin best := y2; found := true end;
+    incr delta;
+    if !delta > hauteur then begin best := ty; found := true end
+  done;
+  { x = 0; y = !best }
+
+let () =
+  Printf.printf "\n=== Source d'eau ===\n";
+  Printf.printf "  Pompe : (%d, %d)  altitude = %.2f m\n"
+    source.x source.y (alt source)
+
+
+(* ============================================================ *)
+(*                    ROUTAGE EN L                              *)
+(* ============================================================ *)
+
+let bresenham x0 y0 x1 y1 =
+  let cells = ref [] in
+  let dx =  abs(x1-x0) and dy = -(abs(y1-y0)) in
+  let sx = if x0<x1 then 1 else -1 in
+  let sy = if y0<y1 then 1 else -1 in
+  let e  = ref (dx+dy) in
+  let x  = ref x0 and y = ref y0 and stop = ref false in
+  while not !stop do
+    cells := (!x,!y) :: !cells;
+    if !x=x1 && !y=y1 then stop := true
+    else begin
+      let e2 = 2 * !e in
+      if e2 >= dy then begin e := !e+dy; x := !x+sx end;
+      if e2 <= dx then begin e := !e+dx; y := !y+sy end
+    end
+  done;
+  List.rev !cells
+
+let count_obs path =
+  List.fold_left (fun a (x,y) ->
+    if arrosable x y then a else a+1) 0 path
+
+let concat_path p1 p2 =
+  match List.rev p1 with
+  | [] -> p2
+  | _  -> p1 @ (match p2 with [] -> [] | _::r -> r)
+
+let route x0 y0 x1 y1 =
+  let l1 = concat_path (bresenham x0 y0 x1 y0)
+                       (bresenham x1 y0 x1 y1) in
+  let l2 = concat_path (bresenham x0 y0 x0 y1)
+                       (bresenham x0 y1 x1 y1) in
+  let direct = bresenham x0 y0 x1 y1 in
+  let o1 = count_obs l1 and o2 = count_obs l2
+  and o3 = count_obs direct in
+  if o1 <= o2 && o1 <= o3 then (l1, o1>0)
+  else if o2 <= o3         then (l2, o2>0)
+  else (direct, o3>0)
+
+let longueur_chemin ch =
+  let rec aux = function
+    | [] | [_] -> 0.0
+    | (x1,y1)::((x2,y2)::_ as rest) ->
+      let s = if abs(x2-x1)+abs(y2-y1)=2
+              then case_size *. 1.4142 else case_size in
+      s +. aux rest
+  in aux ch
+
+
+(* ============================================================ *)
+(*          PLACEMENT GLOUTON DES ARROSEURS                     *)
+(*                                                              *)
+(*  Contrainte de distance minimale :                           *)
+(*  Après avoir placé un arroseur en (bx, by), on marque        *)
+(*  comme "interdites" toutes les cases dans un rayon de        *)
+(*  dist_min_arroseurs autour de ce point.                      *)
+(*  Cela garantit que deux arroseurs ne sont jamais trop        *)
+(*  proches, ce qui évite :                                     *)
+(*    - Le gaspillage (zones sur-irriguées)                     *)
+(*    - Les longues chaînes dans l'ACM                          *)
+(*    - Les chutes de pression en cascade                       *)
+(* ============================================================ *)
+
+let cases_couvertes cx cy =
+  let lst = ref [] in
+  for dy = -rayon_arroseur to rayon_arroseur do
+    for dx = -rayon_arroseur to rayon_arroseur do
+      let nx = cx+dx and ny = cy+dy in
+      if arrosable nx ny
+      && sqrt (float_of_int (dx*dx+dy*dy)) <=
+         float_of_int rayon_arroseur
+      then lst := (nx,ny) :: !lst
+    done
+  done;
+  !lst
+
+let () = Printf.printf "\n=== Placement glouton (distance min = %d cases) ===\n"
+  dist_min_arroseurs
+
+let sprinklers =
+  let couvert  = Array.make_matrix hauteur largeur false in
+  let interdit = Array.make_matrix hauteur largeur false in
+  let total    = ref 0 in
+  for y=0 to hauteur-1 do for x=0 to largeur-1 do
+    if arrosable x y then incr total
+  done done;
+  let places   = ref [] in
+  let couverts = ref 0 in
+  let etape    = ref 0 in
+
+  while !couverts < !total do
+    incr etape;
+
+    (* Trouver la meilleure case non-interdite *)
+    let best = ref (-1) and bx = ref 0 and by = ref 0 in
+    for y=0 to hauteur-1 do for x=0 to largeur-1 do
+      (*if terrain.(y).(x) <> -1 && not interdit.(y).(x) then begin*)
+        let sc = List.fold_left
+          (fun a (nx,ny) ->
+            if not couvert.(ny).(nx) then a+1 else a)
+          0 (cases_couvertes x y) in
+        if sc > !best then begin best:=sc; bx:=x; by:=y
+      end
+    done done;
+
+    if !best <= 0 then begin
+      (* Plus aucune case non-interdite ne couvre du nouveau :
+         lever les interdictions pour finir la couverture      *)
+      for y=0 to hauteur-1 do for x=0 to largeur-1 do
+        interdit.(y).(x) <- false
+      done done;
+      (* Chercher à nouveau sans contrainte de distance *)
+      let best2 = ref (-1) and bx2 = ref 0 and by2 = ref 0 in
+      for y=0 to hauteur-1 do for x=0 to largeur-1 do
+        if terrain.(y).(x) <> -1 then begin
+          let sc = List.fold_left
+            (fun a (nx,ny) ->
+              if not couvert.(ny).(nx) then a+1 else a)
+            0 (cases_couvertes x y) in
+          if sc > !best2 then begin best2:=sc; bx2:=x; by2:=y end
+        end
+      done done;
+      if !best2 <= 0 then couverts := !total
+      else begin
+        places := {x= !bx2; y= !by2} :: !places;
+        List.iter (fun (nx,ny) ->
+          if not couvert.(ny).(nx) then begin
+            couvert.(ny).(nx) <- true; incr couverts
+          end
+        ) (cases_couvertes !bx2 !by2);
+        Printf.printf "  Etape %2d : (%2d,%2d) [sans contrainte]  %d/%d\n"
+          !etape !bx2 !by2 !couverts !total
+      end
+    end else begin
+      places := {x= !bx; y= !by} :: !places;
+
+      (* Marquer les cases couvertes *)
+      List.iter (fun (nx,ny) ->
+        if not couvert.(ny).(nx) then begin
+          couvert.(ny).(nx) <- true; incr couverts
+        end
+      ) (cases_couvertes !bx !by);
+
+      (* Interdire le voisinage de cet arroseur *)
+      for dy = -dist_min_arroseurs to dist_min_arroseurs do
+        for dx = -dist_min_arroseurs to dist_min_arroseurs do
+          let nx = !bx+dx and ny = !by+dy in
+          if nx>=0 && nx<largeur && ny>=0 && ny<hauteur then
+            interdit.(ny).(nx) <- true
+        done
+      done;
+
+      Printf.printf "  Etape %2d : (%2d,%2d) score=%-4d  %d/%d\n"
+        !etape !bx !by !best !couverts !total
+    end
+  done;
+  Printf.printf "[OK] Couverture totale : %d arroseurs\n" !etape;
+  Array.of_list (List.rev !places)
+
+let points        = Array.append [| source |] sprinklers
+let nb_points     = Array.length points
+let nb_sprinklers = Array.length sprinklers
+
+
+(* ============================================================ *)
+(*              DIAMÈTRES STANDARD PE                           *)
+(* ============================================================ *)
+
+let dn_vals = [| 0.016; 0.020; 0.025; 0.032; 0.040;
+                 0.050; 0.063; 0.075; 0.090; 0.110 |]
+let dn_noms = [| "DN16"; "DN20"; "DN25"; "DN32"; "DN40";
+                 "DN50"; "DN63"; "DN75"; "DN90"; "DN110" |]
+
+let standard_dn d =
+  let idx = ref (Array.length dn_vals - 1) in
+  Array.iteri (fun i v ->
+    if v >= d && i < !idx then idx := i) dn_vals;
+  (!idx, dn_vals.(!idx), dn_noms.(!idx))
+
+let diametre_murray q_lpm =
+  if q_lpm <= 0.0 then d0
+  else d0 *. ((q_lpm /. debit_unit) ** (1.0 /. 3.0))
+
+
+(* ============================================================ *)
+(*                 KRUSKAL + UNION-FIND                         *)
+(* ============================================================ *)
+
+let () = Printf.printf "\n=== Kruskal (%d noeuds) ===\n" nb_points
+
+let uf_parent = Array.init nb_points (fun i -> i)
+let uf_rang   = Array.make nb_points 0
+
+let rec find i =
+  if uf_parent.(i) = i then i
+  else begin
+    uf_parent.(i) <- find uf_parent.(i);
+    uf_parent.(i)
+  end
+
+let union i j =
+  let ri = find i and rj = find j in
+  if ri = rj then false
+  else begin
+    (if      uf_rang.(ri) < uf_rang.(rj) then uf_parent.(ri) <- rj
+     else if uf_rang.(ri) > uf_rang.(rj) then uf_parent.(rj) <- ri
+     else begin
+       uf_parent.(rj) <- ri;
+       uf_rang.(ri) <- uf_rang.(ri) + 1
+     end);
+    true
+  end
+
+let acm =
+  let ar = ref [] in
+  for i=0 to nb_points-1 do
+    for j=i+1 to nb_points-1 do
+      let dx = float_of_int (points.(i).x - points.(j).x) in
+      let dy = float_of_int (points.(i).y - points.(j).y) in
+      let d  = sqrt (dx*.dx +. dy*.dy) *. case_size in
+      ar := {i; j; poids=d} :: !ar
+    done
+  done;
+  let tries = List.sort (fun a b -> compare a.poids b.poids) !ar in
+  let res   = ref [] in
+  List.iter (fun a ->
+    if union a.i a.j then res := a :: !res
+  ) tries;
+  List.rev !res
+
+let () = Printf.printf "[OK] ACM : %d aretes\n" (List.length acm)
+
+
+(* ============================================================ *)
+(*           LISTE D'ADJACENCE + TRACÉS EN L                    *)
+(* ============================================================ *)
+
+let adj =
+  let a = Array.make nb_points [] in
+  List.iter (fun e ->
+    a.(e.i) <- e.j :: a.(e.i);
+    a.(e.j) <- e.i :: a.(e.j)
+  ) acm; a
+
+let infos : (int*int, info_arete) Hashtbl.t = Hashtbl.create 64
+
+let () =
+  List.iter (fun a ->
+    let cle = (min a.i a.j, max a.i a.j) in
+    let (ch, obs) = route
+      points.(a.i).x points.(a.i).y
+      points.(a.j).x points.(a.j).y in
+    let lon = longueur_chemin ch in
+    if obs then
+      Printf.printf "  [!] Tuyau %d->%d traverse un obstacle\n"
+        a.i a.j;
+    Hashtbl.replace infos cle
+      { chemin=ch; longueur_m=lon; obstacle=obs }
+  ) acm
+
+
+(* ============================================================ *)
+(*                 CALCUL DES DÉBITS                            *)
+(* ============================================================ *)
+
+let debits : (int*int, float) Hashtbl.t = Hashtbl.create 64
+
+let rec dfs_debit nd par =
+  let enfants = List.filter ((<>) par) adj.(nd) in
+  let self = if nd = 0 then 0 else 1 in
+  List.fold_left (fun acc e ->
+    let n = dfs_debit e nd in
+    Hashtbl.replace debits (min nd e, max nd e)
+      (float_of_int n *. debit_unit);
+    acc + n
+  ) self enfants
+
+let _ = dfs_debit 0 (-1)
+
+let () =
+  Printf.printf "\n=== Debits et diametres ===\n";
+  List.iter (fun a ->
+    let cle = (min a.i a.j, max a.i a.j) in
+    let q   = try Hashtbl.find debits cle
+              with Not_found -> debit_unit in
+    let d   = diametre_murray q in
+    let (_,_,dn) = standard_dn d in
+    Printf.printf "  Tuyau %2d->%-2d : Q=%6.1f L/min  -> %s\n"
+      a.i a.j q dn
+  ) acm
+
+
+(* ============================================================ *)
+(*        PERTES DE CHARGE — DARCY-WEISBACH + COLEBROOK         *)
+(* ============================================================ *)
+
+let nu = mu /. rho
+
+let colebrook_white d re =
+  if re < 1.0         then 0.02
+  else if re < 2300.0 then 64.0 /. re
+  else begin
+    let te  = epsilon /. (3.7 *. d) in
+    let isf = ref 2.0 in
+    for _ = 1 to 15 do
+      isf := -2.0 *. log10 (te +. 2.51 /. (re *. !isf))
+    done;
+    1.0 /. (!isf *. !isf)
+  end
+
+let perte_dw q_lpm d_m lon =
+  let q  = q_lpm /. 60000.0 in
+  let v  = q /. (pi /. 4.0 *. d_m *. d_m) in
+  let re = v *. d_m /. nu in
+  let f  = colebrook_white d_m re in
+  let dp = f *. (lon /. d_m) *. (rho *. v *. v /. 2.0) in
+  (dp, re, v)
+
+let deg_noeuds =
+  let d = Array.make nb_points 0 in
+  List.iter (fun a ->
+    d.(a.i) <- d.(a.i)+1;
+    d.(a.j) <- d.(a.j)+1
+  ) acm; d
+
+let k_sing nd =
+  match deg_noeuds.(nd) with
+  | 1 -> 0.0 | 2 -> 0.3 | 3 -> 1.0 | _ -> 1.5
+
+let pressions = Array.make nb_points 0.0
+let reynolds  = Array.make nb_points 0.0
+let vitesses  = Array.make nb_points 0.0
+let () = pressions.(0) <- p_source
+
+let rec dfs_pression nd par =
+  let enfants = List.filter ((<>) par) adj.(nd) in
+  List.iter (fun e ->
+    let cle  = (min nd e, max nd e) in
+    let q    = try Hashtbl.find debits cle
+               with Not_found -> debit_unit in
+    let d_th = diametre_murray q in
+    let (_,d_std,_) = standard_dn d_th in
+    let lon  = (try (Hashtbl.find infos cle).longueur_m
+                with Not_found -> case_size) in
+    let (dp_reg, re, v) = perte_dw q d_std lon in
+    let dp_sing = k_sing e *. rho *. v *. v /. 2.0 in
+    let dz   = alt points.(nd) -. alt points.(e) in
+    let dp_h = rho *. g_grav *. dz in
+    pressions.(e) <- pressions.(nd) -. dp_reg -. dp_sing +. dp_h;
+    reynolds.(e)  <- re;
+    vitesses.(e)  <- v;
+    dfs_pression e nd
+  ) enfants
+
+let () = dfs_pression 0 (-1)
+
+let sous_pression =
+  Array.init nb_points (fun i ->
+    i > 0 && pressions.(i) < p_min)
+
+let () =
+  Printf.printf "\n=== Pressions (Darcy-Weisbach) ===\n";
+  Array.iteri (fun i p ->
+    if i > 0 then
+      Printf.printf
+        "  A%2d : %.3f bar  v=%.2f m/s  Re=%.0f%s\n"
+        i (p /. 1e5) vitesses.(i) reynolds.(i)
+        (if sous_pression.(i) then "  [!] < P_min" else "")
+  ) pressions;
+  let nb_sp = Array.fold_left
+    (fun a b -> if b then a+1 else a) 0 sous_pression in
+  if nb_sp = 0
+  then Printf.printf "[OK] Toutes pressions >= %.1f bar\n"
+         (p_min/.1e5)
+  else Printf.printf "[!] %d arroseur(s) sous P_min\n" nb_sp
+
+
+(* ============================================================ *)
+(*                 COÛT ÉCONOMIQUE                              *)
+(* ============================================================ *)
+
+let tarif_tuyau dn_idx =
+  let t = [| 0.80; 1.10; 1.60; 2.30; 3.50;
+             5.20; 7.80; 10.50; 14.00; 20.00 |] in
+  if dn_idx >= 0 && dn_idx < Array.length t
+  then t.(dn_idx) else 5.20
+
+let tarif_terr x y =
+  if not (x>=0 && x<largeur && y>=0 && y<hauteur) then 8.0
+  else match terrain.(y).(x) with
+  | 1 -> 35.0 | 2 -> 12.0 | _ -> 8.0
+
+let terr_moyen ch =
+  match ch with
+  | [] -> 8.0
+  | _  ->
+    let s = List.fold_left
+      (fun a (x,y) -> a +. tarif_terr x y) 0.0 ch in
+    s /. float_of_int (List.length ch)
+
+let cout_arroseur = 120.0   (* Rain Bird 8005 grande portée *)
+
+let cout_aretes : (int*int, float*float*int) Hashtbl.t =
+  Hashtbl.create 64
+
+let () =
+  List.iter (fun a ->
+    let cle  = (min a.i a.j, max a.i a.j) in
+    let q    = try Hashtbl.find debits cle
+               with Not_found -> debit_unit in
+    let d_th = diametre_murray q in
+    let (dn_idx,_,_) = standard_dn d_th in
+    let info = try Hashtbl.find infos cle
+               with Not_found ->
+                 { chemin=[]; longueur_m=0.0; obstacle=false } in
+    let ct   = tarif_tuyau dn_idx *. info.longueur_m in
+    let cter = terr_moyen info.chemin *. info.longueur_m in
+    Hashtbl.replace cout_aretes cle (ct, cter, dn_idx)
+  ) acm
+
+let total_tuyaux =
+  Hashtbl.fold (fun _ (ct,_,_) a -> a+.ct) cout_aretes 0.0
+let total_terr =
+  Hashtbl.fold (fun _ (_,ct,_) a -> a+.ct) cout_aretes 0.0
+let total_arr  = float_of_int nb_sprinklers *. cout_arroseur
+let cout_total = total_tuyaux +. total_terr +. total_arr
+
+let () =
+  Printf.printf "\n=== Cout economique ===\n";
+  Printf.printf "  Tuyaux PE         : %8.2f EUR\n" total_tuyaux;
+  Printf.printf "  Terrassement      : %8.2f EUR\n" total_terr;
+  Printf.printf "  Arroseurs (%2dx%.0f): %8.2f EUR\n"
+    nb_sprinklers cout_arroseur total_arr;
+  Printf.printf "  ──────────────────────────────\n";
+  Printf.printf "  TOTAL             : %8.2f EUR\n" cout_total
+
+
+(* ============================================================ *)
+(*                      EXPORT                                  *)
+(* ============================================================ *)
+
+let () = Printf.printf "\n=== Export ===\n"
+
+let () =
+  let oc = open_out "terrain.txt" in
+  Printf.fprintf oc "%d %d\n" largeur hauteur;
+  Array.iter (fun row ->
+    Array.iter (fun v -> Printf.fprintf oc "%d " v) row;
+    output_char oc '\n'
+  ) terrain;
+  close_out oc;
+  Printf.printf "[OK] terrain.txt\n"
+
+let () =
+  let oc = open_out "altitude.txt" in
+  Array.iter (fun row ->
+    Array.iter (fun v -> Printf.fprintf oc "%.4f " v) row;
+    output_char oc '\n'
+  ) altitude;
+  close_out oc;
+  Printf.printf "[OK] altitude.txt\n"
+
+let () =
+  let oc = open_out "points.txt" in
+  Printf.fprintf oc "%d\n" nb_points;
+  Array.iteri (fun i p ->
+    Printf.fprintf oc "%d %d %d %.4f %.6f %.2f %.4f %d %d\n"
+      p.x p.y rayon_arroseur
+      (alt p) pressions.(i) reynolds.(i) vitesses.(i)
+      (if sous_pression.(i) then 1 else 0)
+      (if i=0 then 1 else 0)
+  ) points;
+  close_out oc;
+  Printf.printf "[OK] points.txt (%d noeuds)\n" nb_points
+
+let () =
+  let oc = open_out "acm.txt" in
+  Printf.fprintf oc "%d\n" (List.length acm);
+  List.iter (fun a ->
+    let cle  = (min a.i a.j, max a.i a.j) in
+    let q    = try Hashtbl.find debits cle
+               with Not_found -> debit_unit in
+    let d_th = diametre_murray q in
+    let (_,d_std,dn_nom) = standard_dn d_th in
+    let info = try Hashtbl.find infos cle
+               with Not_found ->
+                 { chemin=[]; longueur_m=0.0; obstacle=false } in
+    let (ct,cter,_) = try Hashtbl.find cout_aretes cle
+                      with Not_found -> (0.0,0.0,0) in
+    Printf.fprintf oc "%d %d %.4f %.6f %.6f %.6f %s %.2f %.2f %d\n"
+      a.i a.j info.longueur_m q d_th d_std dn_nom ct cter
+      (if info.obstacle then 1 else 0);
+    Printf.fprintf oc "%d\n" (List.length info.chemin);
+    List.iter (fun (x,y) ->
+      Printf.fprintf oc "%d %d\n" x y) info.chemin
+  ) acm;
+  close_out oc;
+  Printf.printf "[OK] acm.txt\n"
+
+let () =
+  let couv = Array.make_matrix hauteur largeur 0 in
+  Array.iteri (fun i p ->
+    if i > 0 then
+      List.iter (fun (x,y) -> couv.(y).(x) <- 1)
+        (cases_couvertes p.x p.y)
+  ) points;
+  let oc = open_out "couverture.txt" in
+  Array.iter (fun row ->
+    Array.iter (fun v -> Printf.fprintf oc "%d " v) row;
+    output_char oc '\n'
+  ) couv;
+  close_out oc;
+  let na = ref 0 and nc = ref 0 in
+  for y=0 to hauteur-1 do for x=0 to largeur-1 do
+    if arrosable x y then begin
+      incr na;
+      if couv.(y).(x)=1 then incr nc
+    end
+  done done;
+  Printf.printf "[OK] couverture.txt (%.1f%% couvert)\n"
+    (100.0 *. float_of_int !nc /. float_of_int !na)
+
+let () =
+  let oc = open_out "meta.txt" in
+  Printf.fprintf oc "p_source=%.2f\n" p_source;
+  Printf.fprintf oc "p_min=%.2f\n"    p_min;
+  Printf.fprintf oc "case_size=%.2f\n" case_size;
+  Printf.fprintf oc "debit_unit=%.2f\n" debit_unit;
+  Printf.fprintf oc "rayon=%d\n"       rayon_arroseur;
+  Printf.fprintf oc "nb_arroseurs=%d\n" nb_sprinklers;
+  Printf.fprintf oc "cout_total=%.2f\n" cout_total;
+  close_out oc;
+  Printf.printf "[OK] meta.txt\n"
+
+let () =
+  Printf.printf "\nPipeline termine -> python3 testpyt.py\n"
 </code></pre>
 
 </li>
@@ -193,12 +842,882 @@ let generate_points n =
 <h2>Partie en Python</h2>
 
 <pre><code class="language-python">
-# Exemple Python
+"""
+=============================================================
+  TIPE 2026-2027 — Teissier Pasziere Lubin
+  Visualisation du réseau d'irrigation agricole
 
-def f(x):
-    return x * 2
+  Figures :
+    1. reseau_irrigation.png    — réseau sur le terrain
+    2. couverture_altitude.png  — zones irriguées + relief
+    3. pressions.png            — pressions + régimes
+    4. couts.png                — analyse économique
+    5. schema_acm.png           — arbre hiérarchique
+=============================================================
+"""
 
-print(f(10))
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import matplotlib.cm as cm
+import matplotlib.patheffects as pe
+import numpy as np
+
+
+# ══════════════════════════════════════════════════
+#  LECTURE DES FICHIERS
+# ══════════════════════════════════════════════════
+
+def lire_terrain(f="terrain.txt"):
+    with open(f) as fp:
+        W, H = map(int, fp.readline().split())
+        g = [list(map(int, fp.readline().split()))
+             for _ in range(H)]
+    return W, H, np.array(g)
+
+
+def lire_altitude(f="altitude.txt"):
+    rows = []
+    with open(f) as fp:
+        for line in fp:
+            v = list(map(float, line.split()))
+            if v:
+                rows.append(v)
+    return np.array(rows)
+
+
+def lire_points(f="points.txt"):
+    """
+    Format : x y rayon alt pression re vitesse sous_p is_src
+    """
+    with open(f) as fp:
+        n = int(fp.readline())
+        pts = []
+        for _ in range(n):
+            p = fp.readline().split()
+            pts.append({
+                "x":             int(p[0]),
+                "y":             int(p[1]),
+                "rayon":         int(p[2]),
+                "alt":           float(p[3]),
+                "pression":      float(p[4]),
+                "reynolds":      float(p[5]),
+                "vitesse":       float(p[6]),
+                "sous_pression": int(p[7]) == 1,
+                "is_source":     int(p[8]) == 1,
+            })
+    return pts
+
+
+def lire_acm(f="acm.txt"):
+    aretes = []
+    with open(f) as fp:
+        nb = int(fp.readline())
+        for _ in range(nb):
+            p      = fp.readline().split()
+            i, j   = int(p[0]),   int(p[1])
+            lon_m  = float(p[2])
+            debit  = float(p[3])
+            d_th   = float(p[4])
+            d_std  = float(p[5])
+            dn_nom = p[6]
+            c_tuy  = float(p[7])
+            c_ter  = float(p[8])
+            obs    = int(p[9]) == 1
+            nb_pts = int(fp.readline())
+            chemin = [tuple(map(int, fp.readline().split()))
+                      for _ in range(nb_pts)]
+            aretes.append({
+                "i": i, "j": j,
+                "lon_m": lon_m, "debit": debit,
+                "diam": d_std, "diam_th": d_th,
+                "dn": dn_nom,
+                "cout_tuyau": c_tuy,
+                "cout_terr":  c_ter,
+                "obstacle":   obs,
+                "chemin":     chemin,
+            })
+    return aretes
+
+
+def lire_couverture(f="couverture.txt"):
+    rows = []
+    with open(f) as fp:
+        for line in fp:
+            v = list(map(int, line.split()))
+            if v:
+                rows.append(v)
+    return np.array(rows)
+
+
+def lire_meta(f="meta.txt"):
+    meta = {}
+    with open(f) as fp:
+        for line in fp:
+            line = line.strip()
+            if "=" in line:
+                k, v = line.split("=", 1)
+                try:
+                    meta[k] = float(v)
+                except ValueError:
+                    meta[k] = v
+    return meta
+
+
+# ══════════════════════════════════════════════════
+#  CONSTANTES GRAPHIQUES
+# ══════════════════════════════════════════════════
+
+BG  = "#0d1117"
+BG2 = "#161b22"
+
+COULEURS_TERRAIN = {
+    -1: "#0d1117",
+     0: "#1a3028",
+     1: "#3d2008",
+     2: "#243318",
+}
+
+
+def terrain_rgb(terrain):
+    H, W = terrain.shape
+    img  = np.zeros((H, W, 3))
+    for code, hx in COULEURS_TERRAIN.items():
+        r = int(hx[1:3], 16) / 255
+        g = int(hx[3:5], 16) / 255
+        b = int(hx[5:7], 16) / 255
+        img[terrain == code] = [r, g, b]
+    return img
+
+
+def setup_ax(ax, bg=BG2):
+    ax.set_facecolor(bg)
+    ax.tick_params(colors="#888", labelsize=8)
+    for sp in ax.spines.values():
+        sp.set_edgecolor("#30363d")
+
+
+def extent(W, H):
+    return (-0.5, W - 0.5, H - 0.5, -0.5)
+
+
+def couleur_regime(re):
+    if re < 2300:
+        return "#4fc3f7"    # laminaire
+    elif re < 4000:
+        return "#ffb74d"    # transitoire
+    else:
+        return "#ef5350"    # turbulent
+
+
+# ══════════════════════════════════════════════════
+#  DESSIN DES TUYAUX
+# ══════════════════════════════════════════════════
+
+def draw_tuyaux(ax, points, aretes, cmap=None,
+                show_labels=False, alpha=0.9):
+    if not aretes:
+        return
+    if cmap is None:
+        cmap = cm.plasma
+    max_q   = max(a["debit"] for a in aretes)
+    max_dim = max(a["diam"]  for a in aretes)
+
+    for a in aretes:
+        xi = points[a["i"]]["x"]
+        yi = points[a["i"]]["y"]
+        xj = points[a["j"]]["x"]
+        yj = points[a["j"]]["y"]
+
+        rd  = a["diam"] / max_dim if max_dim > 0 else 0
+        lw  = 0.8 + 5.5 * rd
+
+        if a["obstacle"]:
+            couleur = "#ff4444"
+            ls = "--"
+        else:
+            rq = a["debit"] / max_q if max_q > 0 else 0
+            couleur = cmap(0.10 + 0.85 * rq)
+            ls = "-"
+
+        ax.plot([xi, xj], [yi, yj],
+                color=couleur, linewidth=lw,
+                linestyle=ls, alpha=alpha,
+                solid_capstyle="round", zorder=3)
+
+        if show_labels:
+            mx = (xi + xj) / 2
+            my = (yi + yj) / 2
+            ax.text(mx, my,
+                    f"{a['dn']}\n{a['lon_m']:.0f}m\n"
+                    f"{a['debit']:.1f}L/m",
+                    color="white", fontsize=5.0,
+                    ha="center", va="center", zorder=6,
+                    bbox=dict(boxstyle="round,pad=0.12",
+                              fc=BG, ec="#444", alpha=0.8))
+
+
+# ══════════════════════════════════════════════════
+#  DESSIN DES NŒUDS
+# ══════════════════════════════════════════════════
+
+def draw_noeuds(ax, points, aretes, zorder=5,
+                show_rayon=False):
+    deg = {}
+    for a in aretes:
+        for k in (a["i"], a["j"]):
+            deg[k] = deg.get(k, 0) + 1
+
+    for i, p in enumerate(points):
+        x, y = p["x"], p["y"]
+        d    = deg.get(i, 0)
+
+        if p["is_source"]:
+            ax.scatter(x, y, s=320, c="#00d8ff",
+                       marker="*", edgecolors="white",
+                       linewidths=1.5, zorder=zorder+1)
+            ax.text(x - 0.2, y + 1.2, "Pompe",
+                    color="#00d8ff", fontsize=7.5,
+                    fontweight="bold", ha="center",
+                    zorder=zorder+2,
+                    path_effects=[
+                        pe.withStroke(linewidth=1.5,
+                                      foreground=BG)])
+        elif p["sous_pression"]:
+            ax.scatter(x, y, s=130, c="#ff3333",
+                       marker="s", edgecolors="white",
+                       linewidths=1.2, zorder=zorder+1)
+            ax.text(x, y - 1.0, "!P",
+                    color="#ff3333", fontsize=6.5,
+                    ha="center", fontweight="bold",
+                    zorder=zorder+2)
+        elif d >= 4:
+            ax.scatter(x, y, s=140, c="#ff9800",
+                       marker="D", edgecolors="white",
+                       linewidths=1.2, zorder=zorder+1)
+        elif d == 3:
+            ax.scatter(x, y, s=120, c="#4caf50",
+                       marker="^", edgecolors="white",
+                       linewidths=1.2, zorder=zorder+1)
+        else:
+            ax.scatter(x, y, s=95, c="#2979ff",
+                       marker="o", edgecolors="white",
+                       linewidths=1.0, zorder=zorder+1)
+
+        if show_rayon and not p["is_source"]:
+            c_r = "#ff4444" if p["sous_pression"] else "#00b0ff"
+            ax.add_patch(
+                plt.Circle((x, y), p["rayon"],
+                           color=c_r, fill=False,
+                           linewidth=1.1, ls=":",
+                           alpha=0.5, zorder=2))
+
+
+def legende_noeuds():
+    return [
+        mpatches.Patch(color=COULEURS_TERRAIN[-1],
+                       label="Obstacle"),
+        mpatches.Patch(color=COULEURS_TERRAIN[0],
+                       label="Sol normal (8 EUR/m)"),
+        mpatches.Patch(color=COULEURS_TERRAIN[2],
+                       label="Sol intermediaire (12 EUR/m)"),
+        mpatches.Patch(color=COULEURS_TERRAIN[1],
+                       label="Sol difficile (35 EUR/m)"),
+        mlines.Line2D([], [], c="#00d8ff", marker="*",
+                      ms=11, label="Pompe", lw=0),
+        mlines.Line2D([], [], c="#2979ff", marker="o",
+                      ms=7, label="Arroseur terminal", lw=0),
+        mlines.Line2D([], [], c="#4caf50", marker="^",
+                      ms=7, label="Derivation T", lw=0),
+        mlines.Line2D([], [], c="#ff9800", marker="D",
+                      ms=7, label="Collecteur (>=4)", lw=0),
+        mlines.Line2D([], [], c="#ff3333", marker="s",
+                      ms=7, label="P < P_min", lw=0),
+        mlines.Line2D([], [], c="#ff4444", lw=1.5,
+                      ls="--", label="Obstacle traverse"),
+    ]
+
+
+# ══════════════════════════════════════════════════
+#  FIGURE 1 — Réseau sur terrain
+# ══════════════════════════════════════════════════
+
+def fig_reseau(W, H, terrain, points, aretes, meta):
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.patch.set_facecolor(BG)
+    setup_ax(ax, BG)
+
+    ax.imshow(terrain_rgb(terrain), origin="upper",
+              extent=extent(W, H), zorder=0)
+
+    for x in range(W):
+        ax.axvline(x - 0.5, color="#1e3028",
+                   lw=0.3, alpha=0.4, zorder=1)
+    for y in range(H):
+        ax.axhline(y - 0.5, color="#1e3028",
+                   lw=0.3, alpha=0.4, zorder=1)
+
+    draw_tuyaux(ax, points, aretes, cm.plasma,
+                show_labels=True)
+    draw_noeuds(ax, points, aretes, show_rayon=True)
+
+    max_q = max(a["debit"] for a in aretes) if aretes else 1
+    sm = cm.ScalarMappable(
+        cmap=cm.plasma,
+        norm=mcolors.Normalize(0, max_q))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, fraction=0.022, pad=0.012)
+    cbar.set_label("Debit Q (L/min)", color="white", fontsize=9)
+    cbar.ax.yaxis.set_tick_params(color="white", labelsize=8)
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color="white")
+
+    ax.legend(handles=legende_noeuds(), loc="lower right",
+              fontsize=7, facecolor=BG, edgecolor="#444",
+              labelcolor="white", framealpha=0.9)
+
+    cs       = meta.get("case_size", 6)
+    long_tot = sum(a["lon_m"] for a in aretes)
+    nb_a     = int(meta.get("nb_arroseurs", 0))
+    total    = meta.get("cout_total", 0)
+
+    ax.set_title(
+        f"Reseau d'irrigation — {W*cs:.0f}m x {H*cs:.0f}m\n"
+        f"Pompe {meta.get('p_source', 6e5)/1e5:.0f} bar  |  "
+        f"{nb_a} arroseurs  |  "
+        f"{len(aretes)} tuyaux  |  "
+        f"{long_tot:.0f} m  |  "
+        f"{total:.0f} EUR",
+        color="white", fontsize=10,
+        fontweight="bold", pad=8)
+
+    ax.set_xlim(-0.5, W - 0.5)
+    ax.set_ylim(H - 0.5, -0.5)
+    ax.set_xlabel(f"1 case = {cs:.0f} m",
+                  color="#888", fontsize=8)
+    fig.tight_layout()
+    fig.savefig("reseau_irrigation.png", dpi=160,
+                bbox_inches="tight", facecolor=BG)
+    print("[OK] reseau_irrigation.png")
+
+
+# ══════════════════════════════════════════════════
+#  FIGURE 2 — Couverture + altitude
+# ══════════════════════════════════════════════════
+
+def fig_couverture(W, H, terrain, altitude, points,
+                   aretes, couverture, meta):
+    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+    fig.patch.set_facecolor(BG)
+
+    # Gauche : couverture
+    ax = axes[0]
+    setup_ax(ax)
+    ax.imshow(terrain_rgb(terrain), origin="upper",
+              extent=extent(W, H), zorder=0)
+
+    couv_rgba = np.zeros((H, W, 4))
+    couv_rgba[couverture == 1] = [0.0, 0.72, 1.0, 0.35]
+    mask = (couverture == 0) & (terrain != -1)
+    couv_rgba[mask] = [1.0, 0.25, 0.0, 0.40]
+    ax.imshow(couv_rgba, origin="upper",
+              extent=extent(W, H), zorder=1)
+
+    draw_tuyaux(ax, points, aretes, cm.Greys, alpha=0.30)
+    draw_noeuds(ax, points, aretes, show_rayon=True)
+
+    n_arr = int(np.sum(terrain != -1))
+    n_cov = int(np.sum(couverture == 1))
+    taux  = 100.0 * n_cov / n_arr if n_arr > 0 else 0
+
+    leg2 = [
+        mpatches.Patch(color=(0.0, 0.72, 1.0, 0.55),
+                       label=f"Zone irriguee ({n_cov} cases)"),
+        mpatches.Patch(color=(1.0, 0.25, 0.0, 0.55),
+                       label=f"Non irriguee ({n_arr-n_cov} cases)"),
+    ]
+    ax.legend(handles=leg2, loc="lower right", fontsize=8,
+              facecolor=BG, edgecolor="#444",
+              labelcolor="white")
+    ax.set_title(
+        f"Zones irriguees — set cover glouton\n"
+        f"{n_cov}/{n_arr} cases = {taux:.1f}%",
+        color="white", fontsize=11, fontweight="bold")
+    if taux >= 99.9:
+        ax.text(W / 2, H - 1,
+                "Couverture totale garantie",
+                color="#00e676", fontsize=11,
+                ha="center", fontweight="bold", zorder=8,
+                bbox=dict(boxstyle="round,pad=0.4",
+                          fc=BG, ec="#00e676", alpha=0.9))
+
+    # Droite : altitude
+    ax2 = axes[1]
+    setup_ax(ax2)
+    im = ax2.imshow(altitude, origin="upper",
+                    cmap="YlOrBr_r",
+                    extent=extent(W, H),
+                    zorder=0, alpha=0.80)
+    X = np.linspace(0, W - 1, W)
+    Y = np.linspace(0, H - 1, H)
+    cs_cont = ax2.contour(X, Y, altitude, levels=10,
+                          colors="white", linewidths=0.5,
+                          alpha=0.45, zorder=1)
+    ax2.clabel(cs_cont, inline=True, fontsize=6,
+               colors="white", fmt="%.1fm")
+    draw_tuyaux(ax2, points, aretes, cm.cool)
+    draw_noeuds(ax2, points, aretes)
+
+    cbar = fig.colorbar(im, ax=ax2, fraction=0.022, pad=0.012)
+    cbar.set_label("Altitude (m)", color="white", fontsize=9)
+    cbar.ax.yaxis.set_tick_params(color="white", labelsize=8)
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color="white")
+
+    cs_v = meta.get("case_size", 6)
+    ax2.set_title(
+        f"Relief — {W*cs_v:.0f}x{H*cs_v:.0f} m\n"
+        "Lignes de niveau + tuyaux",
+        color="white", fontsize=11, fontweight="bold")
+
+    for ax in axes:
+        ax.set_xlim(-0.5, W - 0.5)
+        ax.set_ylim(H - 0.5, -0.5)
+
+    fig.tight_layout()
+    fig.savefig("couverture_altitude.png", dpi=160,
+                bbox_inches="tight", facecolor=BG)
+    print(f"[OK] couverture_altitude.png  ({taux:.1f}%)")
+
+
+# ══════════════════════════════════════════════════
+#  FIGURE 3 — Pressions + régimes
+# ══════════════════════════════════════════════════
+
+def fig_pressions(W, H, terrain, points, aretes, meta):
+    p_src = meta.get("p_source", 6e5) / 1e5
+    p_min = meta.get("p_min",    2e5) / 1e5
+
+    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+    fig.patch.set_facecolor(BG)
+
+    p_bars = [p["pression"] / 1e5 for p in points]
+    vmax_p = max(p_bars) + 0.2
+    cmap_p = cm.RdYlGn
+    norm_p = mcolors.Normalize(vmin=p_min, vmax=vmax_p)
+
+    # Gauche : carte des pressions
+    ax = axes[0]
+    setup_ax(ax)
+    ax.imshow(terrain_rgb(terrain), origin="upper",
+              extent=extent(W, H), zorder=0)
+
+    if aretes:
+        max_dim = max(a["diam"] for a in aretes)
+        for a in aretes:
+            xi = points[a["i"]]["x"]
+            yi = points[a["i"]]["y"]
+            xj = points[a["j"]]["x"]
+            yj = points[a["j"]]["y"]
+            p_av = points[a["j"]]["pression"] / 1e5
+            r    = a["diam"] / max_dim if max_dim > 0 else 0
+            ax.plot([xi, xj], [yi, yj],
+                    color=cmap_p(norm_p(p_av)),
+                    linewidth=0.8 + 5.5 * r,
+                    alpha=0.9, solid_capstyle="round",
+                    zorder=3)
+
+    for i, p in enumerate(points):
+        p_bar = p["pression"] / 1e5
+        if p["is_source"]:
+            ax.scatter(p["x"], p["y"], s=300,
+                       c="#00d8ff", marker="*",
+                       edgecolors="white",
+                       linewidths=1.5, zorder=5)
+        else:
+            ax.scatter(p["x"], p["y"], s=130,
+                       c=[cmap_p(norm_p(p_bar))],
+                       edgecolors="white",
+                       linewidths=1.2, zorder=5)
+            ax.text(p["x"] + 0.3, p["y"] - 0.6,
+                    f"{p_bar:.2f}b",
+                    color="white", fontsize=7,
+                    fontweight="bold", zorder=6,
+                    bbox=dict(boxstyle="round,pad=0.12",
+                              fc=BG, ec="#555", alpha=0.8))
+        if p["sous_pression"]:
+            ax.text(p["x"], p["y"] - 1.2, "!",
+                    color="#ff3333", fontsize=13,
+                    ha="center", fontweight="bold",
+                    zorder=7)
+
+    sm = cm.ScalarMappable(cmap=cmap_p, norm=norm_p)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, fraction=0.022, pad=0.012)
+    cbar.set_label("Pression residuelle (bar)",
+                   color="white", fontsize=9)
+    cbar.ax.axhline(p_min, color="red",
+                    linewidth=2.0, ls="--")
+    cbar.ax.yaxis.set_tick_params(color="white", labelsize=8)
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color="white")
+
+    nb_sp = sum(1 for p in points if p["sous_pression"])
+    ax.set_title(
+        f"Pressions (Darcy-Weisbach + Colebrook-White)\n"
+        f"P_pompe={p_src:.1f} b  |  P_min={p_min:.1f} b  |  "
+        f"{'OK' if nb_sp==0 else str(nb_sp)+' deficit(s)'}",
+        color="white", fontsize=11, fontweight="bold")
+    ax.set_xlim(-0.5, W - 0.5)
+    ax.set_ylim(H - 0.5, -0.5)
+
+    # Droite : histogramme pressions + Reynolds
+    ax2 = axes[1]
+    setup_ax(ax2)
+    ax2b = ax2.twinx()
+    ax2b.set_facecolor(BG2)
+
+    idx_arr = [i for i, p in enumerate(points)
+               if not p["is_source"]]
+    p_arr  = [points[i]["pression"] / 1e5 for i in idx_arr]
+    re_arr = [points[i]["reynolds"]        for i in idx_arr]
+    x_pos  = np.arange(len(idx_arr))
+
+    bars = ax2.bar(x_pos - 0.2, p_arr, width=0.4,
+                   color=[cmap_p(norm_p(pb)) for pb in p_arr],
+                   edgecolor="#30363d", linewidth=0.6,
+                   label="Pression (gauche)")
+    ax2b.bar(x_pos + 0.2, re_arr, width=0.4,
+             color=[couleur_regime(re) for re in re_arr],
+             edgecolor="#30363d", linewidth=0.6,
+             alpha=0.75, label="Reynolds (droite)")
+
+    ax2.axhline(p_min, color="#ff4444",
+                linewidth=2.0, ls="--",
+                label=f"P_min = {p_min:.1f} bar")
+    ax2b.axhline(4000, color="#ef5350",
+                 linewidth=1.0, ls=":",
+                 label="Re=4000 (turbulent)")
+    ax2b.axhline(2300, color="#ffb74d",
+                 linewidth=1.0, ls=":",
+                 label="Re=2300 (transitoire)")
+
+    ax2.set_xticks(x_pos)
+    ax2.set_xticklabels([f"A{i}" for i in idx_arr],
+                         rotation=45, ha="right",
+                         fontsize=8, color="white")
+    ax2.set_ylabel("Pression (bar)", color="white",
+                   fontsize=10)
+    ax2b.set_ylabel("Reynolds", color="#aaa", fontsize=10)
+    ax2b.tick_params(colors="#aaa", labelsize=8)
+    ax2.set_ylim(0, vmax_p + 0.3)
+    ax2.set_title(
+        "Pression + Reynolds par arroseur\n"
+        "Bleu=laminaire  Orange=transitoire  Rouge=turbulent",
+        color="white", fontsize=11, fontweight="bold")
+
+    l1, lb1 = ax2.get_legend_handles_labels()
+    l2, lb2 = ax2b.get_legend_handles_labels()
+    ax2.legend(l1 + l2, lb1 + lb2, fontsize=7.5,
+               facecolor=BG, edgecolor="#444",
+               labelcolor="white")
+    for bar, val in zip(bars, p_arr):
+        ax2.text(bar.get_x() + bar.get_width() / 2,
+                 bar.get_height() + 0.03,
+                 f"{val:.2f}",
+                 color="white", ha="center",
+                 fontsize=7.5, fontweight="bold")
+
+    fig.tight_layout()
+    fig.savefig("pressions.png", dpi=160,
+                bbox_inches="tight", facecolor=BG)
+    print("[OK] pressions.png")
+
+
+# ══════════════════════════════════════════════════
+#  FIGURE 4 — Coûts
+# ══════════════════════════════════════════════════
+
+def fig_couts(points, aretes, meta):
+    if not aretes:
+        return
+    nb_arr = int(meta.get("nb_arroseurs", len(points) - 1))
+    c_arr  = nb_arr * 55.0
+    c_tuy  = sum(a["cout_tuyau"] for a in aretes)
+    c_ter  = sum(a["cout_terr"]  for a in aretes)
+    total  = c_tuy + c_ter + c_arr
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    fig.patch.set_facecolor(BG)
+    for ax in axes:
+        setup_ax(ax)
+
+    labels  = [f"{a['dn']}\n{a['i']}->{a['j']}"
+               for a in aretes]
+    c_tot_a = [a["cout_tuyau"] + a["cout_terr"]
+               for a in aretes]
+    x = np.arange(len(aretes))
+
+    # Barres empilées
+    ax1 = axes[0]
+    ax1.bar(x, [a["cout_tuyau"] for a in aretes],
+            label="Tuyau PE", color="#1565c0",
+            edgecolor="#30363d", linewidth=0.5)
+    b2 = ax1.bar(x, [a["cout_terr"] for a in aretes],
+                 bottom=[a["cout_tuyau"] for a in aretes],
+                 label="Terrassement", color="#e65100",
+                 edgecolor="#30363d", linewidth=0.5)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(labels, rotation=45,
+                         ha="right", fontsize=7,
+                         color="white")
+    ax1.set_ylabel("Cout (EUR)", color="white", fontsize=10)
+    ax1.set_title("Cout par tuyau",
+                  color="white", fontsize=11,
+                  fontweight="bold")
+    ax1.legend(fontsize=8, facecolor=BG,
+               edgecolor="#444", labelcolor="white")
+    for bar, val in zip(b2, c_tot_a):
+        ax1.text(bar.get_x() + bar.get_width() / 2,
+                 val + 0.5, f"{val:.0f}E",
+                 color="white", ha="center", fontsize=7)
+
+    # Camembert
+    ax2 = axes[1]
+    ax2.set_facecolor(BG)
+    vals = [c_tuy, c_ter, c_arr]
+    lbls = [f"Tuyaux\n{c_tuy:.0f} EUR",
+            f"Terrassement\n{c_ter:.0f} EUR",
+            f"Arroseurs ({nb_arr}x55)\n{c_arr:.0f} EUR"]
+    cols = ["#1565c0", "#e65100", "#2e7d32"]
+    _, _, auts = ax2.pie(
+        vals, labels=lbls, colors=cols,
+        autopct="%1.1f%%", startangle=90,
+        textprops={"color": "white", "fontsize": 9},
+        wedgeprops={"edgecolor": "#30363d",
+                    "linewidth": 0.8})
+    for at in auts:
+        at.set_color("white")
+        at.set_fontsize(9)
+    ax2.set_title(
+        f"Repartition — TOTAL = {total:.0f} EUR",
+        color="white", fontsize=12, fontweight="bold")
+
+    # Cout/m + diamètre
+    ax3 = axes[2]
+    ax3b = ax3.twinx()
+    ax3b.set_facecolor(BG2)
+    lons  = [a["lon_m"]     for a in aretes]
+    diams = [a["diam"]*1000 for a in aretes]
+    cpm   = [c/l if l > 0 else 0
+             for c, l in zip(c_tot_a, lons)]
+    norm_c = mcolors.Normalize(0, max(cpm) if cpm else 1)
+
+    ax3.bar(x, cpm,
+            color=[cm.plasma(norm_c(v)) for v in cpm],
+            edgecolor="#30363d", linewidth=0.5,
+            alpha=0.85, label="EUR/m")
+    ax3b.plot(x, diams, "o--", color="#00e676",
+              linewidth=1.5, ms=6, zorder=5,
+              label="Diametre (mm)")
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(labels, rotation=45,
+                         ha="right", fontsize=7,
+                         color="white")
+    ax3.set_ylabel("Cout (EUR/m)", color="white",
+                   fontsize=10)
+    ax3b.set_ylabel("Diametre (mm)", color="#00e676",
+                    fontsize=10)
+    ax3b.tick_params(colors="#00e676", labelsize=8)
+    ax3.set_title("Cout/m vs diametre (PE SDR 11)",
+                  color="white", fontsize=11,
+                  fontweight="bold")
+    l1, lb1 = ax3.get_legend_handles_labels()
+    l2, lb2 = ax3b.get_legend_handles_labels()
+    ax3.legend(l1 + l2, lb1 + lb2, fontsize=7,
+               facecolor=BG, edgecolor="#444",
+               labelcolor="white")
+
+    fig.tight_layout()
+    fig.savefig("couts.png", dpi=160,
+                bbox_inches="tight", facecolor=BG)
+    print(f"[OK] couts.png  ({total:.0f} EUR)")
+
+
+# ══════════════════════════════════════════════════
+#  FIGURE 5 — Schéma ACM
+# ══════════════════════════════════════════════════
+
+def fig_schema_acm(points, aretes, meta):
+    if not aretes:
+        return
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.patch.set_facecolor(BG)
+    setup_ax(ax, BG)
+
+    max_q   = max(a["debit"] for a in aretes)
+    max_dim = max(a["diam"]  for a in aretes)
+    p_min_b = meta.get("p_min", 2e5) / 1e5
+    cmap    = cm.plasma
+
+    for a in aretes:
+        xi = points[a["i"]]["x"]
+        yi = points[a["i"]]["y"]
+        xj = points[a["j"]]["x"]
+        yj = points[a["j"]]["y"]
+        rq = a["debit"] / max_q if max_q > 0 else 0
+        rd = a["diam"]  / max_dim if max_dim > 0 else 0
+
+        ax.plot([xi, xj], [yi, yj],
+                color=cmap(0.10 + 0.85 * rq),
+                linewidth=1.0 + 8.0 * rd,
+                alpha=0.90, solid_capstyle="round",
+                solid_joinstyle="round", zorder=2)
+
+        mx = (xi + xj) / 2
+        my = (yi + yj) / 2
+        re_j = points[a["j"]]["reynolds"]
+        reg  = ("T" if re_j > 4000
+                else "tr" if re_j > 2300 else "L")
+        ax.annotate(
+            f"{a['dn']} · {a['debit']:.1f}L/m\n"
+            f"{a['lon_m']:.0f}m · Re={re_j:.0f}({reg})",
+            (mx, my), color="white", fontsize=5.5,
+            ha="center", va="center", zorder=5,
+            bbox=dict(boxstyle="round,pad=0.2",
+                      fc=BG, ec="#444", alpha=0.85))
+
+    for i, p in enumerate(points):
+        p_bar = p["pression"] / 1e5
+        if p["is_source"]:
+            ax.scatter(p["x"], p["y"], s=400,
+                       c="#00d8ff", marker="*",
+                       edgecolors="white",
+                       linewidths=2, zorder=6)
+            ax.text(p["x"], p["y"] + 1.3,
+                    f"POMPE\n{p_bar:.1f} bar",
+                    color="#00d8ff", fontsize=8,
+                    ha="center", fontweight="bold",
+                    zorder=7,
+                    path_effects=[
+                        pe.withStroke(linewidth=2,
+                                      foreground=BG)])
+        else:
+            ok = not p["sous_pression"]
+            c  = "#43a047" if ok else "#ff3333"
+            ax.scatter(p["x"], p["y"], s=160, c=c,
+                       edgecolors="white",
+                       linewidths=1.5, zorder=6)
+            ax.text(p["x"], p["y"] + 1.2,
+                    f"A{i}\n{p_bar:.2f}b",
+                    color=c, fontsize=7,
+                    ha="center", fontweight="bold",
+                    zorder=7,
+                    path_effects=[
+                        pe.withStroke(linewidth=1.5,
+                                      foreground=BG)])
+
+    sm = cm.ScalarMappable(
+        cmap=cmap,
+        norm=mcolors.Normalize(0, max_q))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax,
+                        fraction=0.022, pad=0.012)
+    cbar.set_label("Debit Q (L/min)",
+                   color="white", fontsize=9)
+    cbar.ax.yaxis.set_tick_params(color="white",
+                                  labelsize=8)
+    plt.setp(cbar.ax.yaxis.get_ticklabels(),
+             color="white")
+
+    ax.set_title(
+        "Schema hierarchique — ACM de Kruskal\n"
+        "Epaisseur proportionnelle au debit  |  "
+        "Pression en bar  |  Re = Reynolds",
+        color="white", fontsize=10,
+        fontweight="bold", pad=12)
+    ax.invert_yaxis()
+    ax.set_aspect("equal")
+    fig.tight_layout()
+    fig.savefig("schema_acm.png", dpi=160,
+                bbox_inches="tight", facecolor=BG)
+    print("[OK] schema_acm.png")
+
+
+# ══════════════════════════════════════════════════
+#  RÉSUMÉ TERMINAL
+# ══════════════════════════════════════════════════
+
+def resume(W, H, points, aretes, terrain, couverture, meta):
+    n_arr  = int(np.sum(terrain != -1))
+    n_cov  = int(np.sum(couverture == 1))
+    taux   = 100.0 * n_cov / n_arr if n_arr > 0 else 0
+    nb_sp  = sum(1 for p in points if p["sous_pression"])
+    nb_obs = sum(1 for a in aretes if a["obstacle"])
+    long   = sum(a["lon_m"] for a in aretes)
+    c_tuy  = sum(a["cout_tuyau"] for a in aretes)
+    c_ter  = sum(a["cout_terr"]  for a in aretes)
+    nb_a   = int(meta.get("nb_arroseurs", 0))
+    c_arr  = nb_a * 55.0
+    total  = c_tuy + c_ter + c_arr
+    cs     = meta.get("case_size", 6)
+    p_src  = meta.get("p_source", 6e5) / 1e5
+    p_min  = meta.get("p_min",    2e5) / 1e5
+    nb_t   = sum(1 for p in points if p["reynolds"] > 4000)
+    nb_tr  = sum(1 for p in points
+                 if 2300 < p["reynolds"] <= 4000)
+    nb_l   = sum(1 for p in points if p["reynolds"] <= 2300)
+
+    print("\n" + "=" * 60)
+    print("  RESEAU D'IRRIGATION — RESUME FINAL")
+    print("=" * 60)
+    print(f"  Champ            : {W*cs:.0f}m x {H*cs:.0f}m = "
+          f"{W*cs*H*cs/10000:.2f} ha")
+    print(f"  Arroseurs        : {nb_a}")
+    print(f"  Tuyaux           : {len(aretes)}")
+    print(f"  Longueur totale  : {long:.1f} m")
+    print(f"  Couverture       : {n_cov}/{n_arr} = "
+          f"{taux:.1f}%"
+          + (" OK" if taux >= 99.9 else " !"))
+    print(f"  Obstacles        : "
+          f"{'aucun' if nb_obs == 0 else str(nb_obs)}")
+    print(f"  P_pompe / P_min  : "
+          f"{p_src:.1f} / {p_min:.1f} bar")
+    print(f"  P < P_min        : "
+          f"{'aucun' if nb_sp == 0 else str(nb_sp)}")
+    print(f"  Regimes          : "
+          f"{nb_t} turb. / {nb_tr} trans. / {nb_l} lam.")
+    print(f"  Cout tuyaux      : {c_tuy:.0f} EUR")
+    print(f"  Cout terrassement: {c_ter:.0f} EUR")
+    print(f"  Cout arroseurs   : {c_arr:.0f} EUR")
+    print(f"  " + "-" * 38)
+    print(f"  TOTAL            : {total:.0f} EUR")
+    print("=" * 60 + "\n")
+
+
+# ══════════════════════════════════════════════════
+#  POINT D'ENTRÉE
+# ══════════════════════════════════════════════════
+
+if __name__ == "__main__":
+    print("Lecture des fichiers...")
+    W, H, terrain  = lire_terrain()
+    altitude        = lire_altitude()
+    points          = lire_points()
+    aretes          = lire_acm()
+    couverture      = lire_couverture()
+    meta            = lire_meta()
+
+    resume(W, H, points, aretes, terrain, couverture, meta)
+
+    print("Generation des figures...")
+    fig_reseau(W, H, terrain, points, aretes, meta)
+    fig_couverture(W, H, terrain, altitude, points,
+                   aretes, couverture, meta)
+    fig_pressions(W, H, terrain, points, aretes, meta)
+    fig_couts(points, aretes, meta)
+    fig_schema_acm(points, aretes, meta)
+
+    plt.show()
+    print("\nTermine.")
 </code></pre>
 
 </li>
