@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIPE — Documentation et Physique</title>
+
+<style>
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  margin: 40px;
+  background-color: #f7f9fc;
+  color: #222;
+  font-size: 18px;
+}
+
+h1, h2, h3 {
+  color: #1a3c6e;
+}
+
+h1 {
+  border-bottom: 3px solid #1a3c6e;
+  padding-bottom: 5px;
+}
+
+h2 {
+  border-left: 4px solid #1a3c6e;
+  padding-left: 10px;
+  margin-top: 40px;
+}
+
+h3 {
+  color: #2a5ca8;
+  margin-top: 25px;
+}
+
+section {
+  background: white;
+  padding: 20px;
+  margin-bottom: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.fonction {
+  background: #f0f4ff;
+  border-left: 4px solid #2a5ca8;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 0 8px 8px 0;
+}
+
+.fonction .nom {
+  font-family: Consolas, monospace;
+  font-size: 16px;
+  font-weight: bold;
+  color: #1a3c6e;
+}
+
+.fonction .desc {
+  margin-top: 5px;
+  color: #333;
+}
+
+.loi {
+  background: #fff8e1;
+  border-left: 4px solid #f9a825;
+  padding: 14px 18px;
+  margin: 16px 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.formule {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  font-family: Consolas, monospace;
+  font-size: 15px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 10px 0;
+  overflow-x: auto;
+}
+
+.oral {
+  background: #e8f5e9;
+  border-left: 4px solid #43a047;
+  padding: 12px 16px;
+  margin-top: 14px;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: #2e7d32;
+}
+
+.oral::before {
+  content: "🎤 À l'oral : ";
+  font-weight: bold;
+  font-style: normal;
+}
+
+.synthese-etape {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.synthese-numero {
+  background: #1a3c6e;
+  color: white;
+  font-weight: bold;
+  font-size: 15px;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+ul {
+  margin-left: 20px;
+}
+
+li {
+  margin-bottom: 6px;
+}
+
+nav {
+  margin-bottom: 25px;
+}
+
+nav a {
+  margin-right: 15px;
+  font-weight: bold;
+  color: #0066cc;
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+.zoom {
+  margin-bottom: 20px;
+}
+
+.zoom button {
+  font-size: 16px;
+  padding: 5px 10px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+
+a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>TIPE 2026-2027 — Documentation et Physique</h1>
+
+<div class="zoom">
+  <button onclick="changeFontSize(2)">A+</button>
+  <button onclick="changeFontSize(-2)">A-</button>
+</div>
+
+<nav>
+  <a href="#fonctions">Fonctions</a>
+  <a href="#murray">Loi de Murray</a>
+  <a href="#darcy">Darcy-Weisbach</a>
+  <a href="#colebrook">Colebrook-White</a>
+  <a href="#hydrostatique">Pression hydrostatique</a>
+  <a href="#rayon">Loi R(P)</a>
+  <a href="#synthese">Synthèse</a>
+  <a href="index.html">← Retour</a>
+</nav>
+
+
+<!-- ══════════════════════════════════════════ -->
+<!-- PARTIE 1 : FONCTIONS                       -->
+<!-- ══════════════════════════════════════════ -->
+
+<section id="fonctions">
+<h2>Partie 1 — Description du code, fonction par fonction</h2>
+
+<h3>Initialisation</h3>
+
+<div class="fonction">
+  <div class="nom">Random.self_init</div>
+  <div class="desc">Initialise le générateur pseudo-aléatoire avec l'heure système. Sans cela, le terrain serait identique à chaque exécution car OCaml utilise un seed fixe par défaut. Cette ligne doit impérativement être la première instruction du programme.</div>
+</div>
+
+<h3>Génération du terrain</h3>
+
+<div class="fonction">
+  <div class="nom">terrain</div>
+  <div class="desc">Crée une matrice 30×30 représentant le champ agricole. Chaque case a une valeur : 0 (sol normal), 1 (sol difficile, terrassement coûteux), 2 (sol intermédiaire), -1 (obstacle infranchissable : ferme ou mare). Les obstacles sont placés aléatoirement. Le bord gauche est toujours libre pour permettre le placement de la pompe.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">arrosable x y</div>
+  <div class="desc">Fonction booléenne qui retourne vrai si la case (x,y) est dans la grille et n'est pas un obstacle (valeur ≠ -1). Appelée partout dans le code pour vérifier si on peut tracer un tuyau ou placer un arroseur à cet endroit.</div>
+</div>
+
+<h3>Altitude et relief</h3>
+
+<div class="fonction">
+  <div class="nom">lisser alt</div>
+  <div class="desc">Lisse un tableau 2D en remplaçant chaque valeur par la moyenne de ses voisins dans un carré 5×5. Appelée deux fois successivement pour obtenir un relief progressif et réaliste, sans discontinuités brusques.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">altitude</div>
+  <div class="desc">Génère un plan incliné aléatoire (pente variable en X et Y) avec un petit bruit gaussien, puis le lisse deux fois. Représente l'altitude réelle du terrain en mètres. Utilisée pour calculer la pression hydrostatique : l'eau monte moins facilement en altitude.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">alt p</div>
+  <div class="desc">Retourne simplement l'altitude du point p en lisant le tableau altitude. Raccourci utilisé dans tous les calculs de pression.</div>
+</div>
+
+<h3>Source d'eau</h3>
+
+<div class="fonction">
+  <div class="nom">source</div>
+  <div class="desc">Cherche la case libre la plus proche du milieu du bord gauche de la grille. C'est là qu'est placée la pompe d'irrigation. Si le milieu est occupé par un obstacle, cherche la case libre la plus proche au-dessus puis en dessous.</div>
+</div>
+
+<h3>Routage des tuyaux</h3>
+
+<div class="fonction">
+  <div class="nom">bresenham x0 y0 x1 y1</div>
+  <div class="desc">Algorithme de Bresenham : trace la ligne droite la plus proche entre deux points sur la grille, case par case. Retourne la liste ordonnée des cases traversées. Utilisé comme brique de base pour construire les tracés en L.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">count_obs path</div>
+  <div class="desc">Compte le nombre de cases obstacles (-1) traversées par un chemin. Permet de comparer différents tracés et de choisir le moins problématique.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">concat_path p1 p2</div>
+  <div class="desc">Concatène deux chemins en évitant de dupliquer le point de jonction. Nécessaire pour construire les tracés en L.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">route x0 y0 x1 y1</div>
+  <div class="desc">Calcule le meilleur tracé entre deux points. Essaie trois options : (1) horizontal puis vertical, (2) vertical puis horizontal, (3) ligne droite par Bresenham. Choisit celle qui traverse le moins d'obstacles.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">longueur_chemin ch</div>
+  <div class="desc">Calcule la longueur réelle en mètres d'un chemin. Chaque case droite vaut case_size = 5m, chaque case diagonale vaut 5 × √2 ≈ 7.07m.</div>
+</div>
+
+<h3>Placement des arroseurs</h3>
+
+<div class="fonction">
+  <div class="nom">cases_couvertes cx cy rayon</div>
+  <div class="desc">Retourne la liste de toutes les cases arrosables situées dans un cercle de rayon donné autour de la case (cx, cy). Utilisée pour évaluer la couverture d'un arroseur potentiel et pour calculer la zone réellement irriguée.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">sprinklers</div>
+  <div class="desc">Algorithme glouton de set cover. À chaque étape, place un arroseur à l'endroit qui couvre le plus de cases non encore irriguées. Après chaque placement, interdit une zone circulaire (dist_min = 9 cases) pour empêcher deux arroseurs trop proches. Si toutes les positions respectant cette contrainte sont épuisées mais qu'il reste des zones non couvertes (zones isolées par des obstacles), place un arroseur directement sur une case non couverte.</div>
+</div>
+
+<h3>Construction du réseau</h3>
+
+<div class="fonction">
+  <div class="nom">standard_dn d</div>
+  <div class="desc">Prend un diamètre théorique continu et retourne le plus petit diamètre commercial PE supérieur ou égal, parmi DN16 à DN110 (norme NF EN ISO 4427). En pratique on ne peut acheter que ces tailles standard.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">diametre_murray q_lpm</div>
+  <div class="desc">Calcule le diamètre théorique optimal selon la loi de Murray : d ∝ Q^(1/3). Le paramètre d0 est le diamètre de référence calculé pour un arroseur seul à débit nominal.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">find i</div>
+  <div class="desc">Fonction de l'Union-Find : retourne le représentant (racine) de la composante connexe contenant le sommet i. Utilise la compression de chemin pour accélérer les appels futurs.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">union i j</div>
+  <div class="desc">Fusionne les deux composantes connexes contenant i et j. Utilise l'union par rang pour maintenir l'arbre plat. Retourne false si i et j sont déjà dans la même composante (cycle détecté) — c'est ainsi que Kruskal évite les cycles.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">acm</div>
+  <div class="desc">Algorithme de Kruskal : (1) génère toutes les arêtes possibles entre les n points, (2) les trie par longueur croissante, (3) les parcourt dans l'ordre et ajoute chaque arête si elle ne crée pas de cycle (testé par Union-Find). Résultat : l'arbre couvrant minimal, le réseau de tuyaux le plus court reliant tous les arroseurs à la pompe.</div>
+</div>
+
+<h3>Hydraulique</h3>
+
+<div class="fonction">
+  <div class="nom">dfs_debit nd par</div>
+  <div class="desc">Parcours en profondeur depuis la source. Calcule le débit dans chaque tuyau = somme des débits de tous les arroseurs en aval. Un arroseur terminal consomme 15 L/min. Un nœud intermédiaire transporte la somme des débits de tous ses enfants.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">colebrook_white d re</div>
+  <div class="desc">Équation de Colebrook-White résolue par itération (15 tours). Donne le facteur de frottement f selon le diamètre et le nombre de Reynolds. En régime laminaire (Re &lt; 2300) : f = 64/Re directement.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">perte_dw q_lpm d_m lon</div>
+  <div class="desc">Équation de Darcy-Weisbach : calcule la perte de charge ΔP dans un tuyau de longueur lon et diamètre d_m traversé par un débit q_lpm. Retourne aussi le nombre de Reynolds et la vitesse d'écoulement.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">k_sing nd</div>
+  <div class="desc">Coefficient de pertes singulières au nœud nd selon son nombre de branchements : 0 (terminal), 0.3 (passage droit), 1.0 (dérivation T), 1.5 (collecteur ≥ 4 branches).</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">dfs_pression nd par</div>
+  <div class="desc">Parcours en profondeur depuis la source (12 bar). Pour chaque nœud enfant, calcule la pression résiduelle en soustrayant les pertes de charge régulières (Darcy-Weisbach), les pertes singulières (k_sing), et en corrigeant par la pression hydrostatique (ρgh) selon le dénivelé.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">rayon_effectif pression</div>
+  <div class="desc">Applique la loi R(P) = R₀ × √(P/P_min). Un arroseur bien alimenté conserve son rayon nominal. Un arroseur sous-alimenté arrose moins loin. Borné entre 1 case minimum et rayon_arroseur maximum.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">rayons_effectifs</div>
+  <div class="desc">Tableau calculé après le DFS de pression. Contient le rayon réel de chaque arroseur selon sa pression résiduelle. Exporté dans points.txt pour que Python dessine les cercles d'arrosage à la bonne taille.</div>
+</div>
+
+<h3>Coûts économiques</h3>
+
+<div class="fonction">
+  <div class="nom">tarif_tuyau dn_idx</div>
+  <div class="desc">Prix en €/m du tuyau PE selon le diamètre, d'après le catalogue Aliaxis : de 0.80 €/m pour DN16 à 20.00 €/m pour DN110.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">tarif_terr x y</div>
+  <div class="desc">Coût de terrassement en €/m selon le type de sol : 8 €/m (normal), 12 €/m (intermédiaire), 35 €/m (difficile, ex. roche).</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">terr_moyen ch</div>
+  <div class="desc">Calcule le coût moyen de terrassement sur tout le chemin d'un tuyau, en faisant la moyenne des tarifs de toutes les cases traversées.</div>
+</div>
+
+<div class="fonction">
+  <div class="nom">cout_aretes</div>
+  <div class="desc">Pour chaque arête de l'ACM, calcule le coût total = coût matériau (tarif_tuyau × longueur) + coût terrassement (terr_moyen × longueur).</div>
+</div>
+
+<h3>Export vers Python</h3>
+<p>Six fichiers texte sont exportés pour Python/Matplotlib :</p>
+<ul>
+  <li><strong>terrain.txt</strong> — grille 30×30 des types de sol</li>
+  <li><strong>altitude.txt</strong> — grille 30×30 des altitudes en mètres</li>
+  <li><strong>points.txt</strong> — coordonnées, rayon effectif, altitude, pression, Reynolds, vitesse de chaque nœud</li>
+  <li><strong>acm.txt</strong> — liste des tuyaux avec débit, diamètre, longueur, coût, chemin case par case</li>
+  <li><strong>couverture.txt</strong> — grille indiquant quelles cases sont irriguées</li>
+  <li><strong>meta.txt</strong> — paramètres globaux (pression pompe, coût total, etc.)</li>
+</ul>
+
+</section>
+
+
+<!-- ══════════════════════════════════════════ -->
+<!-- PARTIE 2 : PHYSIQUE                        -->
+<!-- ══════════════════════════════════════════ -->
+
+<section id="murray">
+<h2>2.1 La loi de Murray — Dimensionnement des tuyaux</h2>
+
+<h3>Qu'est-ce que c'est ?</h3>
+<p>La loi de Murray (1926) décrit comment les diamètres d'un réseau ramifié doivent se répartir pour minimiser le travail dépensé par le fluide. Elle a été établie initialement pour les vaisseaux sanguins, mais s'applique à tout réseau d'écoulement en arbre.</p>
+
+<h3>La formule</h3>
+<p>Si un tuyau parent de diamètre d₀ se divise en branches de diamètres d₁, d₂, ..., la loi de Murray dit :</p>
+<div class="formule">d₀³ = d₁³ + d₂³ + ...</div>
+<p>Plus généralement, le diamètre d'un tuyau transportant un débit Q est :</p>
+<div class="formule">d(Q) = d_ref × (Q / Q_ref)^(1/3)</div>
+<p>où d_ref est le diamètre de référence pour un arroseur seul à débit Q_ref = 15 L/min.</p>
+
+<h3>Pourquoi Q^(1/3) ?</h3>
+<p>La loi de Murray minimise la somme de deux termes antagonistes : les pertes de charge (qui diminuent quand le diamètre augmente) et le coût du matériau (qui augmente avec le diamètre). L'optimum se trouve exactement en d ∝ Q^(1/3).</p>
+<p><strong>Conséquence pratique :</strong> si un tuyau transporte 8 fois plus d'eau qu'un autre, son diamètre optimal est 8^(1/3) = 2 fois plus grand.</p>
+
+<h3>Implémentation OCaml</h3>
+<div class="formule">let diametre_murray q_lpm =
+  if q_lpm &lt;= 0.0 then d0
+  else d0 *. ((q_lpm /. debit_unit) ** (1.0 /. 3.0))</div>
+
+<div class="oral">La loi de Murray est un résultat d'optimisation : elle donne le diamètre qui minimise simultanément les pertes d'énergie par frottement et le coût du matériau. Dans un réseau irrigatoire, les tuyaux proches de la pompe transportent beaucoup d'eau et doivent donc être nettement plus larges que les tuyaux terminaux. La relation d ∝ Q^(1/3) garantit cette hiérarchie de façon optimale.</div>
+</section>
+
+
+<section id="darcy">
+<h2>2.2 L'équation de Darcy-Weisbach — Pertes de charge</h2>
+
+<h3>Qu'est-ce que c'est ?</h3>
+<p>L'équation de Darcy-Weisbach calcule la perte de pression due au frottement de l'eau contre les parois d'un tuyau. C'est l'équation fondamentale de l'hydraulique en conduite.</p>
+
+<h3>La formule</h3>
+<div class="formule">ΔP = f × (L/D) × (ρ × v² / 2)</div>
+<ul>
+  <li><strong>f</strong> = facteur de frottement de Darcy (sans dimension)</li>
+  <li><strong>L</strong> = longueur du tuyau (m)</li>
+  <li><strong>D</strong> = diamètre intérieur (m)</li>
+  <li><strong>ρ</strong> = masse volumique de l'eau = 1000 kg/m³</li>
+  <li><strong>v</strong> = vitesse moyenne d'écoulement (m/s)</li>
+</ul>
+
+<h3>Comment on calcule v ?</h3>
+<p>La vitesse est déduite du débit Q et de la section S = π×D²/4 :</p>
+<div class="formule">v = Q / S = Q / (π × D² / 4)</div>
+
+<h3>Le nombre de Reynolds</h3>
+<p>Avant de calculer f, on calcule le nombre de Reynolds qui caractérise le régime d'écoulement :</p>
+<div class="formule">Re = v × D / ν</div>
+<p>où ν = μ/ρ ≈ 10⁻⁶ m²/s est la viscosité cinématique de l'eau à 20°C.</p>
+<ul>
+  <li>Re &lt; 2300 : régime <strong>laminaire</strong> (écoulement doux, couches parallèles)</li>
+  <li>2300 &lt; Re &lt; 4000 : régime <strong>transitoire</strong></li>
+  <li>Re &gt; 4000 : régime <strong>turbulent</strong> (tourbillons, pertes plus importantes)</li>
+</ul>
+
+<h3>Implémentation OCaml</h3>
+<div class="formule">let perte_dw q_lpm d_m lon =
+  let q  = q_lpm /. 60000.0 in        (* L/min -> m³/s *)
+  let v  = q /. (pi /. 4.0 *. d_m *. d_m) in
+  let re = v *. d_m /. nu in
+  let f  = colebrook_white d_m re in
+  let dp = f *. (lon /. d_m) *. (rho *. v *. v /. 2.0) in
+  (dp, re, v)</div>
+
+<div class="oral">Darcy-Weisbach est l'équation de référence pour calculer les pertes de charge en conduite. Elle dit que la pression chute proportionnellement à la longueur du tuyau, au carré de la vitesse, et au facteur de frottement. Plus le tuyau est long, plus la vitesse est grande, plus la pression chute. C'est pourquoi les arroseurs en bout de réseau reçoivent moins de pression que ceux proches de la pompe.</div>
+</section>
+
+
+<section id="colebrook">
+<h2>2.3 L'équation de Colebrook-White — Facteur de frottement</h2>
+
+<h3>Qu'est-ce que c'est ?</h3>
+<p>L'équation de Colebrook-White donne le facteur de frottement f en régime turbulent. Elle est <strong>implicite</strong> (f apparaît des deux côtés), donc on la résout par itération numérique.</p>
+
+<h3>La formule</h3>
+<div class="formule">1/√f = -2 × log₁₀( ε/(3.7×D) + 2.51/(Re×√f) )</div>
+<p>où ε = 7×10⁻⁶ m est la rugosité absolue du tuyau PE (polyéthylène).</p>
+
+<h3>Cas laminaire (Re &lt; 2300)</h3>
+<p>En régime laminaire, la formule est simple et explicite :</p>
+<div class="formule">f = 64 / Re</div>
+
+<h3>Résolution itérative</h3>
+<p>On part d'une valeur initiale 1/√f = 2.0 et on applique 15 fois la formule :</p>
+<div class="formule">let isf = ref 2.0 in
+for _ = 1 to 15 do
+  isf := -2.0 *. log10(te +. 2.51 /. (re *. !isf))
+done;
+f = 1.0 / (!isf * !isf)</div>
+<p>15 itérations sont largement suffisantes pour une convergence à 10⁻⁶ près.</p>
+
+<div class="oral">Le facteur de frottement f de Darcy-Weisbach dépend lui-même du régime d'écoulement. En laminaire c'est simple : f = 64/Re. En turbulent, on utilise l'équation de Colebrook-White qui est implicite — f apparaît des deux côtés — donc on la résout par itération numérique. On part d'une estimation et on affine 15 fois, ce qui donne une précision largement suffisante pour notre modèle.</div>
+</section>
+
+
+<section id="hydrostatique">
+<h2>2.4 La pression hydrostatique — Effet du dénivelé</h2>
+
+<h3>Qu'est-ce que c'est ?</h3>
+<p>Dans un terrain non plat, l'eau perd de la pression en montant et en regagne en descendant. C'est l'effet hydrostatique, directement issu de l'équation de Bernoulli.</p>
+
+<h3>La formule</h3>
+<div class="formule">ΔP_h = ρ × g × Δz</div>
+<p>où Δz = altitude(amont) − altitude(aval) est la différence de hauteur en mètres.</p>
+<ul>
+  <li>Si Δz &gt; 0 (descente) : ΔP_h &gt; 0, la pression <strong>augmente</strong></li>
+  <li>Si Δz &lt; 0 (montée) : ΔP_h &lt; 0, la pression <strong>diminue</strong></li>
+</ul>
+
+<h3>Implémentation OCaml</h3>
+<div class="formule">let dz   = alt points.(nd) -. alt points.(e) in
+let dp_h = rho *. g_grav *. dz in
+pressions.(e) &lt;- pressions.(nd) -. dp_reg -. dp_sing +. dp_h</div>
+
+<div class="oral">L'effet hydrostatique dit simplement que l'eau perd de la pression quand elle monte (elle doit vaincre la gravité) et en gagne quand elle descend. Sur un terrain agricole avec un dénivelé de quelques mètres, cet effet peut représenter quelques dixièmes de bar, ce qui n'est pas négligeable face à une pression minimale de 2 bar. C'est un terme correctif important pour avoir un modèle réaliste.</div>
+</section>
+
+
+<section id="rayon">
+<h2>2.5 La loi R(P) = R₀ × √(P/P_min) — Rayon effectif de l'arroseur</h2>
+
+<h3>Qu'est-ce que c'est ?</h3>
+<p>Un arroseur rotatif à jet fonctionne par éjection d'eau sous pression. Plus la pression est grande, plus l'eau est éjectée loin. La relation entre rayon de portée et pression découle de l'équation de Bernoulli.</p>
+
+<h3>La formule</h3>
+<div class="formule">R(P) = R₀ × √(P / P_min)</div>
+<p><strong>Démonstration :</strong> par Bernoulli, la vitesse d'éjection v ∝ √P. La portée d'un jet parabolique est proportionnelle à v², donc R ∝ v ∝ √P. En normalisant par P_min (pression à laquelle R = R₀), on obtient la formule.</p>
+
+<h3>Exemples numériques</h3>
+<p>Avec R₀ = 5 cases et P_min = 2 bar :</p>
+<ul>
+  <li>P = 2 bar → R = 5 × √(2/2) = <strong>5 cases</strong> (rayon nominal)</li>
+  <li>P = 4 bar → R = 5 × √(4/2) = 5 × 1.41 = <strong>7 cases</strong></li>
+  <li>P = 8 bar → R = 5 × √(8/2) = 5 × 2 = 10 → capé à <strong>5 cases</strong></li>
+  <li>P = 1 bar → R = 5 × √(1/2) = 3.5 → <strong>3 cases</strong> (arroseur sous-alimenté)</li>
+</ul>
+
+<h3>Implémentation OCaml</h3>
+<div class="formule">let rayon_effectif pression =
+  if pression &lt;= 0.0 then 1
+  else
+    let r = float_of_int rayon_arroseur *. sqrt (pression /. p_min) in
+    max 1 (min (int_of_float r) rayon_arroseur)</div>
+
+<div class="oral">Par l'équation de Bernoulli, la vitesse d'éjection d'un arroseur est proportionnelle à √P. Or la portée d'un jet balistique est proportionnelle au carré de la vitesse initiale, donc proportionnelle à P. Le rayon, proportionnel à la racine de la portée, est donc proportionnel à √P. On normalise par la pression minimale de fonctionnement pour obtenir R(P) = R₀ × √(P/P_min). Un arroseur sous-alimenté arrose moins loin : c'est un comportement physiquement réaliste et directement observable sur le terrain.</div>
+</section>
+
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SYNTHÈSE                                   -->
+<!-- ══════════════════════════════════════════ -->
+
+<section id="synthese">
+<h2>Synthèse — Enchaînement des calculs physiques</h2>
+<p>Voici l'ordre dans lequel les calculs physiques s'enchaînent dans le code :</p>
+
+<div class="synthese-etape">
+  <div class="synthese-numero">1</div>
+  <div><strong>Débits</strong> (dfs_debit) — propagation depuis les feuilles vers la racine. Chaque tuyau transporte la somme des débits en aval.</div>
+</div>
+
+<div class="synthese-etape">
+  <div class="synthese-numero">2</div>
+  <div><strong>Diamètres</strong> (diametre_murray + standard_dn) — diamètre optimal par loi de Murray, arrondi au standard PE.</div>
+</div>
+
+<div class="synthese-etape">
+  <div class="synthese-numero">3</div>
+  <div><strong>Pertes de charge</strong> (colebrook_white + perte_dw) — facteur f par Colebrook-White, puis ΔP par Darcy-Weisbach.</div>
+</div>
+
+<div class="synthese-etape">
+  <div class="synthese-numero">4</div>
+  <div><strong>Pertes singulières</strong> (k_sing) — pertes supplémentaires aux coudes, dérivations T et collecteurs.</div>
+</div>
+
+<div class="synthese-etape">
+  <div class="synthese-numero">5</div>
+  <div><strong>Pression hydrostatique</strong> — correction ρgΔz selon le dénivelé du terrain.</div>
+</div>
+
+<div class="synthese-etape">
+  <div class="synthese-numero">6</div>
+  <div><strong>Pression résiduelle</strong> (dfs_pression) — propagation depuis la source : P(enfant) = P(parent) − ΔP_reg − ΔP_sing + ΔP_h.</div>
+</div>
+
+<div class="synthese-etape">
+  <div class="synthese-numero">7</div>
+  <div><strong>Rayon effectif</strong> (rayon_effectif) — R(P) = R₀ × √(P/P_min) pour chaque arroseur selon sa pression réelle.</div>
+</div>
+
+</section>
+
+<script>
+function changeFontSize(change) {
+  let body = document.body;
+  let current = parseFloat(window.getComputedStyle(body).fontSize);
+  body.style.fontSize = (current + change) + "px";
+}
+</script>
+
+</body>
+</html>
