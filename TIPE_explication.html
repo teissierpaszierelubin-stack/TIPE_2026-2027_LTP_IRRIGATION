@@ -589,10 +589,11 @@ pressions.(e) &lt;- pressions.(nd) -. dp_reg -. dp_sing +. dp_h</div>
 </section>
 
 <script>
-function changeFontSize(change) {
-  let body = document.body;
-  let current = parseFloat(window.getComputedStyle(body).fontSize);
-  body.style.fontSize = (current + change) + "px";
+function changeFontSize(d) {
+  const current = parseFloat(window.getComputedStyle(document.body).fontSize);
+  const newSize = current + d;
+  document.body.style.fontSize = newSize + "px";
+  document.querySelector('.navbar').style.fontSize = newSize + "px";
 }
 </script>
 
