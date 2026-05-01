@@ -425,8 +425,6 @@ a:hover {
 <div class="formule">let diametre_murray q_lpm =
   if q_lpm &lt;= 0.0 then d0
   else d0 *. ((q_lpm /. debit_unit) ** (1.0 /. 3.0))</div>
-
-<div class="oral">La loi de Murray est un résultat d'optimisation : elle donne le diamètre qui minimise simultanément les pertes d'énergie par frottement et le coût du matériau. Dans un réseau irrigatoire, les tuyaux proches de la pompe transportent beaucoup d'eau et doivent donc être nettement plus larges que les tuyaux terminaux. La relation d ∝ Q^(1/3) garantit cette hiérarchie de façon optimale.</div>
 </section>
 
 
@@ -468,8 +466,6 @@ a:hover {
   let f  = colebrook_white d_m re in
   let dp = f *. (lon /. d_m) *. (rho *. v *. v /. 2.0) in
   (dp, re, v)</div>
-
-<div class="oral">Darcy-Weisbach est l'équation de référence pour calculer les pertes de charge en conduite. Elle dit que la pression chute proportionnellement à la longueur du tuyau, au carré de la vitesse, et au facteur de frottement. Plus le tuyau est long, plus la vitesse est grande, plus la pression chute. C'est pourquoi les arroseurs en bout de réseau reçoivent moins de pression que ceux proches de la pompe.</div>
 </section>
 
 
@@ -495,8 +491,6 @@ for _ = 1 to 15 do
 done;
 f = 1.0 / (!isf * !isf)</div>
 <p>15 itérations sont largement suffisantes pour une convergence à 10⁻⁶ près.</p>
-
-<div class="oral">Le facteur de frottement f de Darcy-Weisbach dépend lui-même du régime d'écoulement. En laminaire c'est simple : f = 64/Re. En turbulent, on utilise l'équation de Colebrook-White qui est implicite — f apparaît des deux côtés — donc on la résout par itération numérique. On part d'une estimation et on affine 15 fois, ce qui donne une précision largement suffisante pour notre modèle.</div>
 </section>
 
 
@@ -518,8 +512,6 @@ f = 1.0 / (!isf * !isf)</div>
 <div class="formule">let dz   = alt points.(nd) -. alt points.(e) in
 let dp_h = rho *. g_grav *. dz in
 pressions.(e) &lt;- pressions.(nd) -. dp_reg -. dp_sing +. dp_h</div>
-
-<div class="oral">L'effet hydrostatique dit simplement que l'eau perd de la pression quand elle monte (elle doit vaincre la gravité) et en gagne quand elle descend. Sur un terrain agricole avec un dénivelé de quelques mètres, cet effet peut représenter quelques dixièmes de bar, ce qui n'est pas négligeable face à une pression minimale de 2 bar. C'est un terme correctif important pour avoir un modèle réaliste.</div>
 </section>
 
 
@@ -548,8 +540,6 @@ pressions.(e) &lt;- pressions.(nd) -. dp_reg -. dp_sing +. dp_h</div>
   else
     let r = float_of_int rayon_arroseur *. sqrt (pression /. p_min) in
     max 1 (min (int_of_float r) rayon_arroseur)</div>
-
-<div class="oral">Par l'équation de Bernoulli, la vitesse d'éjection d'un arroseur est proportionnelle à √P. Or la portée d'un jet balistique est proportionnelle au carré de la vitesse initiale, donc proportionnelle à P. Le rayon, proportionnel à la racine de la portée, est donc proportionnel à √P. On normalise par la pression minimale de fonctionnement pour obtenir R(P) = R₀ × √(P/P_min). Un arroseur sous-alimenté arrose moins loin : c'est un comportement physiquement réaliste et directement observable sur le terrain.</div>
 </section>
 
 
