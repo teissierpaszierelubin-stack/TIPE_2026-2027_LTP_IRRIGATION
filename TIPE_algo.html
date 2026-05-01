@@ -1707,10 +1707,11 @@ if __name__ == "__main__":
 </section>
 
 <script>
-function changeFontSize(delta) {
-  const body = document.body;
-  let currentSize = parseFloat(window.getComputedStyle(body).fontSize);
-  body.style.fontSize = (currentSize + delta) + "px";
+function changeFontSize(d) {
+  const current = parseFloat(window.getComputedStyle(document.body).fontSize);
+  const newSize = current + d;
+  document.body.style.fontSize = newSize + "px";
+  document.querySelector('.navbar').style.fontSize = newSize + "px";
 }
 </script>
 
