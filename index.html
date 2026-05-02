@@ -455,6 +455,16 @@ function changeFontSize(d) {
   document.querySelectorAll('.navbar, .navbar *').forEach(el => {
     el.style.fontSize = newSize + "px";
   });
+  localStorage.setItem('fontSize', newSize);
+}
+
+// Appliquer la taille sauvegardée au chargement de la page
+const savedSize = localStorage.getItem('fontSize');
+if (savedSize) {
+  document.body.style.fontSize = savedSize + "px";
+  document.querySelectorAll('.navbar, .navbar *').forEach(el => {
+    el.style.fontSize = savedSize + "px";
+  });
 }
 
 </script>
