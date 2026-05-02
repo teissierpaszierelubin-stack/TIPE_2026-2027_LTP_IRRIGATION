@@ -593,14 +593,9 @@ function changeFontSize(d) {
   const current = parseFloat(window.getComputedStyle(document.body).fontSize);
   const newSize = current + d;
   document.body.style.fontSize = newSize + "px";
-  document.querySelector('.navbar').style.fontSize = newSize + "px";
-  document.querySelector('.nav-zoom button').style.fontSize = newSize + "px";
-  document.querySelector('.navbar-inner').style.fontSize = newSize + "px";
-  document.querySelector('.nav-brand').style.fontSize = newSize + "px";
-  document.querySelector('.nav-links').style.fontSize = newSize + "px";
-  document.querySelector('.nav-links li a').style.fontSize = newSize + "px";
-  document.querySelector('.nav-links li a:hover, .nav-links li a.active').style.fontSize = newSize + "px";
-  document.querySelector('.nav-zoom').style.fontSize = newSize + "px";
+  document.querySelectorAll('.navbar, .navbar *').forEach(el => {
+    el.style.fontSize = newSize + "px";
+  });
 }
 </script>
 
